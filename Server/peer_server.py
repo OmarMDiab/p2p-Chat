@@ -126,7 +126,8 @@ class PeerServer(threading.Thread):
                         # if a message is received, and if this is not a quit message ':q' and 
                         # if it is not an empty message, show this message to the user
                         elif messageReceived[:2] != ":q" and len(messageReceived)!= 0:
-                            print(self.chattingClientName + ": " + messageReceived)
+# >>>>>>>>>>>>>>>> fixing alignemnt
+                            print("\n"+self.chattingClientName + ": " + messageReceived)
                         # if the message received is a quit message ':q',
                         # makes ischatrequested 1 to receive new incoming request messages
                         # removes the socket of the connected peer from the inputs list
@@ -207,6 +208,7 @@ class PeerClient(threading.Thread):
                 # as long as the server status is chatting, this client can send messages
                 while self.peerServer.isChatRequested == 1:
                     # message input prompt
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> fixed alignment    
                     messageSent = input(self.username + ": ")
                     # sends the message to the connected peer, and logs it
                     self.tcpClientSocket.send(messageSent.encode())

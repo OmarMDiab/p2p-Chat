@@ -1,2 +1,2 @@
-
-                    # and removes the thread for this user from tcpThreads
+rom " + self.ipToConnect + ":" + str(self.portToConnect) + " -> " + self.responseReceived)
+            print("Response is " + s

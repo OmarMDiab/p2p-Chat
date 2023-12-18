@@ -9,8 +9,7 @@ import threading
 import select
 import logging
 import db
-from config import PortAssigner
-ps=PortAssigner()
+
 
 # This class is used to process the peer messages sent to registry
 # for each peer connected to registry, a new client thread is created
@@ -88,11 +87,9 @@ class ClientThread(threading.Thread):
                                 self.lock.release()
 
                             #new_port=ps.assign()
-                            sock = socket()
-                            sock.bind(('', 0))
-                            new_port = sock.getsockname()[1]
-                            #db.user_login(message[1], self.ip, message[3])  # >>>>>>>>>>>,<<<<<<
-                            db.user_login(message[1], self.ip, new_port) 
+                            
+                            db.user_login(message[1], self.ip, message[3])  # >>>>>>>>>>>,<<<<<<
+                            #db.user_login(message[1], self.ip, new_port) 
                             # login-success is sent to peer,
                             # and a udp server thread is created for this peer, and thread is started
                             # timer thread of the udp server is started
@@ -122,13 +119,15 @@ class ClientThread(threading.Thread):
                                 del tcpThreads[message[1]]
                         finally:
                             self.lock.release()
+                            '''
+                            trying to enable a certain port :(
                         print(f"usrname =   {self.username}")
                         result=db.get_peer_ip_port(str(self.username))
                         my_ip,my_port =result
                         
                         print(f"my_port  = {my_port}")
                         #ps.en_port(y)
-                        
+                        '''
                         print(self.ip + ":" + str(self.port) + " is logged out")
                         self.tcpClientSocket.close()
                         self.udpServer.timer.cancel()
@@ -192,7 +191,7 @@ class UDPServer(threading.Thread):
     # resets the timer for udp server
     def resetTimer(self):
         self.timer.cancel()
-        self.timer = threading.Timer(3, self.waitHelloMessage) 
+        self.timer = threading.Timer(5, self.waitHelloMessage) 
         self.timer.start()
 
 
