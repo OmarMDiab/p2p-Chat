@@ -9,7 +9,7 @@ import threading
 import select
 import logging
 import db
-
+from config import *
 
 # This class is used to process the peer messages sent to registry
 # for each peer connected to registry, a new client thread is created
@@ -85,11 +85,9 @@ class ClientThread(threading.Thread):
                                 tcpThreads[self.username] = self
                             finally:
                                 self.lock.release()
-
-                            #new_port=ps.assign()
                             
-                            db.user_login(message[1], self.ip, message[3])  # >>>>>>>>>>>,<<<<<<
-                            #db.user_login(message[1], self.ip, new_port) 
+                            db.user_login(message[1], self.ip, message[3])  
+
                             # login-success is sent to peer,
                             # and a udp server thread is created for this peer, and thread is started
                             # timer thread of the udp server is started
@@ -119,15 +117,7 @@ class ClientThread(threading.Thread):
                                 del tcpThreads[message[1]]
                         finally:
                             self.lock.release()
-                            '''
-                            trying to enable a certain port :(
-                        print(f"usrname =   {self.username}")
-                        result=db.get_peer_ip_port(str(self.username))
-                        my_ip,my_port =result
-                        
-                        print(f"my_port  = {my_port}")
-                        #ps.en_port(y)
-                        '''
+
                         print(self.ip + ":" + str(self.port) + " is logged out")
                         self.tcpClientSocket.close()
                         self.udpServer.timer.cancel()
@@ -191,6 +181,8 @@ class UDPServer(threading.Thread):
     # resets the timer for udp server
     def resetTimer(self):
         self.timer.cancel()
+
+                                                         # >>>>>>>>>>>> Timer of hello time (we increased it to more flexible if user have bad connection)
         self.timer = threading.Timer(5, self.waitHelloMessage) 
         self.timer.start()
 
@@ -230,7 +222,7 @@ tcpSocket = socket(AF_INET, SOCK_STREAM)
 udpSocket = socket(AF_INET, SOCK_DGRAM)
 tcpSocket.bind((host,port))
 udpSocket.bind((host,portUDP))
-tcpSocket.listen(5)
+tcpSocket.listen(5)     
 
 # input sockets that are listened
 inputs = [tcpSocket, udpSocket]

@@ -72,6 +72,7 @@ class peerMain:
                     sock = socket()
                     sock.bind(('', 0))
                     peerServerPort = sock.getsockname()[1]
+
                     status = self.login(username, password, peerServerPort)
                     # is user logs in successfully, peer variables are set
                     if status == 1:
@@ -101,12 +102,10 @@ class peerMain:
                     self.peerServer.tcpServerSocket.close()
                     if self.peerClient is not None:
                         self.peerClient.tcpClientSocket.close()
-                    print("Logged out successfully")
+                    print("Logged out successfully\n")
+                    choice="q"
                     log_flag=False
-                # is peer is not logged in and exits the program
-                elif choice == "3":
-                    self.logout(2)
-
+                    new_obj=peerMain()  # to initialize a new peer if he wants!
 
 # >>>>>>>>>>>>>>>>>>>>>>> search a user
                 if choice == "1" and self.isOnline:
@@ -128,12 +127,14 @@ class peerMain:
                     if i_flag:
                         username = input("Enter the username of user to start chat: ")
                         searchStatus = self.searchUser(username)
-                    print("am here!")
+                    i_flag=True
                     # if searched user is found, then its ip address and port number is retrieved
                     # and a client thread is created
                     # main process waits for the client thread to finish its chat
                     if searchStatus is not None and searchStatus != 0:
-                        searchStatus = searchStatus.split(":")
+                        # Check if the variable is a list
+                        if not isinstance(searchStatus, list):
+                            searchStatus = searchStatus.split(":")
                         self.peerClient = PeerClient(searchStatus[0], int(searchStatus[1]) , self.loginCredentials[0], self.peerServer, None)
                         self.peerClient.start()
                         self.peerClient.join()
