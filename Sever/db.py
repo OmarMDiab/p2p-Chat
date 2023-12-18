@@ -35,4 +35,10 @@ class DB:
 
     def get_peer_ip_port(self, username):
         online_peer = self.db.online_peers.find_one({"username": username})
-        return (online_peer["ip"], online_peer["port"]) if online_peer else None
+        if online_peer and "ip" in online_peer and "port" in online_peer:
+            return online_peer["ip"], online_peer["port"]
+        else:
+            print(f"Error: Required fields not found for {username}")
+            return None
+    
+    
