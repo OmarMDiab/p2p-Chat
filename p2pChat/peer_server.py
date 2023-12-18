@@ -9,6 +9,10 @@ import threading
 import time
 import select
 import logging
+from colorama import init, Fore, Back, Style
+
+
+init(autoreset=True)
 
 # Server side of peer
 class PeerServer(threading.Thread):
@@ -127,7 +131,7 @@ class PeerServer(threading.Thread):
                         # if it is not an empty message, show this message to the user
                         elif messageReceived[:2] != ":q" and len(messageReceived)!= 0:
 # >>>>>>>>>>>>>>>> fixing alignemnt
-                            print("\n"+self.chattingClientName + ": " + messageReceived)
+                            print(Fore.RED + "\n"+self.chattingClientName + ": " + messageReceived)
                         # if the message received is a quit message ':q',
                         # makes ischatrequested 1 to receive new incoming request messages
                         # removes the socket of the connected peer from the inputs list
