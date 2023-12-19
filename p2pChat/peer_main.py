@@ -63,12 +63,13 @@ class peerMain:
                     if i_flag:
                         print(">>login")
                         username = input("username: ")
-                    # Get password input without echoing to the terminal
+                        # Get password input without echoing to the terminal
                         password = getpass.getpass("Password: ")
                         # Hash the password using SHA-256
                         password = hashlib.sha256(password.encode()).hexdigest()
                     print("trying Logging you in .....")
 
+                    # Get New Port: -
                     sock = socket()
                     sock.bind(('', 0))
                     peerServerPort = sock.getsockname()[1]
@@ -105,7 +106,8 @@ class peerMain:
                     print("Logged out successfully\n")
                     choice="q"
                     log_flag=False
-                    new_obj=peerMain()  # to initialize a new peer if he wants!
+                    del self  # To
+                    new_obj=peerMain()  # to initialize a new peer after he Logs out!
 
 # >>>>>>>>>>>>>>>>>>>>>>> search a user
                 if choice == "1" and self.isOnline:
@@ -249,7 +251,7 @@ class peerMain:
         message = "HELLO " + self.loginCredentials[0]
         logging.info("Send to " + self.registryName + ":" + str(self.registryUDPPort) + " -> " + message)
         self.udpClientSocket.sendto(message.encode(), (self.registryName, self.registryUDPPort))
-        self.timer = threading.Timer(1, self.sendHelloMessage) # hello control
+        self.timer = threading.Timer(1, self.sendHelloMessage) # status control
         self.timer.start()
 
 # peer is started
