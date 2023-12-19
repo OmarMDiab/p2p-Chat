@@ -10,11 +10,11 @@ You can:
 - send/receive messages from other online peers
 
 ## How to run 
-- go to p2pChat directory
+- go to **p2pChat** directory
     - `cd p2pChat`
-- run registry.py file to start connection
+- run **registry.py** file to start connection
     - `python registry.py`
-- run peer_main.py to start app as a peer
+- run **peer_main.py** to start app as a peer
     - `python peer_main.py`
-- or run run_peers.py instead to start app for a specific number of peers
+- or run **run_peers.py** instead to start app for a specific number of peers
     - `python run_peers.py`
