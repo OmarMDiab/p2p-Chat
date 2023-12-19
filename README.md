@@ -8,8 +8,7 @@ You can:
 
 - Create Account
 - login
-- Search online peers
-- Show Online Users
+- Search/Show Online Peers
 - send/receive messages from other online peers
 
 ## How to run
