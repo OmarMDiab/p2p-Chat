@@ -41,4 +41,16 @@ class DB:
             print(f"Error: Required fields not found for {username}")
             return None
     
+    def get_online_usernames(self):
+        online_peers = self.db.online_peers.find()
+        usernames = []
+
+        for online_peer in online_peers:
+            if "username" in online_peer:
+                usernames.append(online_peer["username"])
+            else:
+                print(f"Error: Username not found for online peer {online_peer}")
+
+        return usernames
+
     

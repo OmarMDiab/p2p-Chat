@@ -182,7 +182,8 @@ class UDPServer(threading.Thread):
     def resetTimer(self):
         self.timer.cancel()
 
-                                                         # >>>>>>>>>>>> Timer of hello time (we increased it to more flexible if user have bad connection)
+                                       # >>>>>>>>>>>> Timer of hello time (we increased it to more flexible if user have bad connection)
+        
         self.timer = threading.Timer(5, self.waitHelloMessage) 
         self.timer.start()
 
@@ -193,7 +194,7 @@ port = 15600
 portUDP = 15500
 
 # db initialization
-db = db.DB()
+#############################db = db.DB()
 
 # gets the ip address of this peer
 # first checks to get it for windows devices

@@ -1,6 +1,8 @@
 from peer_server import *
 import hashlib
 import getpass
+from config import db
+
 
 # main process of the peer
 class peerMain:
@@ -38,6 +40,7 @@ class peerMain:
         logging.basicConfig(filename="peer.log", level=logging.INFO)
         # as long as the user is not logged out, asks to select an option in the menu
         print("Welcome to Chating_club_19 ^^ ")
+        
         
         while choice != "q":
 
@@ -92,22 +95,10 @@ class peerMain:
                         i_flag=True    # Reset Flag
 
             else:
-                choice=input("\nChoose:\n1) search a user\n2) Start a chat\n3) Logout\n                    press <q> to exit\n")
+                choice=input("\nChoose:\n1) search a user\n2) Start a chat\n3) Show Online users\n4) Logout\n                    press <q> to exit\n")
                 # if choice is 3 and user is logged in, then user is logged out
                 # and peer variables are set, and server and client sockets are closed
-                if choice == "3" and self.isOnline:
-                    self.logout(1)
-                    self.isOnline = False
-                    self.loginCredentials = (None, None)
-                    self.peerServer.isOnline = False
-                    self.peerServer.tcpServerSocket.close()
-                    if self.peerClient is not None:
-                        self.peerClient.tcpClientSocket.close()
-                    print("Logged out successfully\n")
-                    choice="q"
-                    log_flag=False
-                    del self  # To reserve memory
-                    new_obj=peerMain()  # to initialize a new peer after he Logs out!
+                
 
 # >>>>>>>>>>>>>>>>>>>>>>> search a user
                 if choice == "1" and self.isOnline:
@@ -140,6 +131,31 @@ class peerMain:
                         self.peerClient = PeerClient(searchStatus[0], int(searchStatus[1]) , self.loginCredentials[0], self.peerServer, None)
                         self.peerClient.start()
                         self.peerClient.join()
+
+
+                if choice=="3":
+                    online_users=db.get_online_usernames()
+                    print("\nOnline User: -")
+                    for user in online_users:
+                        if user != username:
+                            print(Fore.BLUE + f">> {user}")
+
+
+
+
+                if choice == "4" and self.isOnline:
+                    self.logout(1)
+                    self.isOnline = False
+                    self.loginCredentials = (None, None)
+                    self.peerServer.isOnline = False
+                    self.peerServer.tcpServerSocket.close()
+                    if self.peerClient is not None:
+                        self.peerClient.tcpClientSocket.close()
+                    print("Logged out successfully\n")
+                    choice="q"
+                    log_flag=False
+                    del self  # To reserve memory
+                    new_obj=peerMain()  # to initialize a new peer after he Logs out!
 
 
                 # if this is the receiver side then it will get the prompt to accept an incoming request during the main loop
