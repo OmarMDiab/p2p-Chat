@@ -24,7 +24,7 @@ You can:
 
 ## Authors
 
-- [@Mohammed Yasser](https://github.com/helmy162)
+- [@Mohamed Abdelmaksoud](https://github.com/helmy162)
 - [@Nada Wagdy](https://github.com/nadaWagdy)
 - [@Nour Ayman](https://github.com/NourAbouElMakarem)
 - [@Omar Diab](https://github.com/OmarMDiab)
