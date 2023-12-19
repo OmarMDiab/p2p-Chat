@@ -106,7 +106,7 @@ class peerMain:
                     print("Logged out successfully\n")
                     choice="q"
                     log_flag=False
-                    del self  # To
+                    del self  # To reserve memory
                     new_obj=peerMain()  # to initialize a new peer after he Logs out!
 
 # >>>>>>>>>>>>>>>>>>>>>>> search a user
