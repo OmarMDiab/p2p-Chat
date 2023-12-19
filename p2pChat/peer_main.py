@@ -87,7 +87,7 @@ class peerMain:
                         # hello message is sent to registry
                         self.sendHelloMessage()
 
-                        print(f"Hello {username} ^^")
+                        print( Fore.GREEN + f"Hello {username} ^^")
                         log_flag=True  # to know if he logged_in
                         i_flag=True    # Reset Flag
 
