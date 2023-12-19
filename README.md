@@ -6,9 +6,10 @@ A p2p chat application that uses centralized index approach.
 
 You can:
 
-- create account
+- Create Account
 - login
-- search online peers
+- Search online peers
+- Show Online Users
 - send/receive messages from other online peers
 
 ## How to run
