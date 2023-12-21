@@ -95,13 +95,27 @@ class peerMain:
                         i_flag=True    # Reset Flag
 
             else:
-                choice=input("\nChoose:\n1) search a user\n2) Start a chat\n3) Show Online users\n4) Logout\n                    press <q> to exit\n")
+                choice=input("\nMain Menu: -\n1) Profile\n2) Show Online users\n3) search a user\n4) Start a chat\n5) Logout\n                    press <q> to exit\n")
                 # if choice is 3 and user is logged in, then user is logged out
                 # and peer variables are set, and server and client sockets are closed
+
+
+                if choice=="1":
+                    ip,usr_port=db.get_peer_ip_port(username)
+                    print(Fore.BLUE +  f"Username: {username}\nip: {ip}\nPort: {usr_port}")
+
+
+
+                if choice=="2":
+                    online_users=db.get_online_usernames()
+                    print("\nOnline User: -")
+                    for user in online_users:
+                        if user != username:
+                            print(Fore.BLUE + f">> {user}")
                 
 
 # >>>>>>>>>>>>>>>>>>>>>>> search a user
-                if choice == "1" and self.isOnline:
+                if choice == "3" and self.isOnline:
                     username = input("Username to be searched: ")
                     searchStatus = self.searchUser(username)
                     # if user is found its ip address is shown to user
@@ -110,13 +124,13 @@ class peerMain:
                         print("\nDo you want to start chat with him?")
                         choice=input("press [y]:Yes or [n]:Not now\n")
                         if choice=="y":
-                            choice = "2"
+                            choice = "4"
                             i_flag= False
 
 
 
 # >>>>>>>>>>>>>>>>>>>>>>>> Start a chat
-                if choice == "2" and self.isOnline:
+                if choice == "4" and self.isOnline:
                     if i_flag:
                         username = input("Enter the username of user to start chat: ")
                         searchStatus = self.searchUser(username)
@@ -133,17 +147,12 @@ class peerMain:
                         self.peerClient.join()
 
 
-                if choice=="3":
-                    online_users=db.get_online_usernames()
-                    print("\nOnline User: -")
-                    for user in online_users:
-                        if user != username:
-                            print(Fore.BLUE + f">> {user}")
+                
 
 
 
 
-                if choice == "4" and self.isOnline:
+                if choice == "5" and self.isOnline:
                     self.logout(1)
                     self.isOnline = False
                     self.loginCredentials = (None, None)
