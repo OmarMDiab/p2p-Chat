@@ -8,6 +8,7 @@ You can:
 
 - Create Account
 - login
+- Show Profile
 - Search/Show Online Peers
 - send/receive messages from other online peers
 
