@@ -40,9 +40,29 @@ class ClientThread(threading.Thread):
             try:
                 # waits for incoming messages from peers
                 message = self.tcpClientSocket.recv(1024).decode().split()
-                logging.info("Received from " + self.ip + ":" + str(self.port) + " -> " + " ".join(message))            
-                #   JOIN    #
-                if message[0] == "JOIN":
+                logging.info("Received from " + self.ip + ":" + str(self.port) + " -> " + " ".join(message))  
+
+
+                #   Create Room    #
+                if message[0] == "CREATE":
+                    # join-exist is sent to peer,
+                    # if an account with this username already exists
+                    if db.does_room_exist(message[1]):
+                        response = "join-exist"
+                        print("From-> " + self.ip + ":" + str(self.port) + " " + response)
+                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)  
+                        self.tcpClientSocket.send(response.encode())
+                    # join-success is sent to peer,
+                    # if an account with this username is not exist, and the account is created
+                    else:
+                        db.Register_room(message[1], message[2],message[3])
+                        response = "join-success"
+                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                        self.tcpClientSocket.send(response.encode())
+
+
+                #   CREATE ACC    #
+                elif message[0] == "JOIN":
                     # join-exist is sent to peer,
                     # if an account with this username already exists
                     if db.is_account_exist(message[1]):
@@ -57,6 +77,7 @@ class ClientThread(threading.Thread):
                         response = "join-success"
                         logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
                         self.tcpClientSocket.send(response.encode())
+
                 #   LOGIN    #
                 elif message[0] == "LOGIN":
                     # login-account-not-exist is sent to peer,
@@ -145,6 +166,53 @@ class ClientThread(threading.Thread):
                         response = "search-user-not-found"
                         logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
                         self.tcpClientSocket.send(response.encode())
+
+                #    GET ONlINE USERS   #
+                elif message[0]=="GET_USERS":
+                        online_users = db.get_online_usernames()
+                        response =" ".join(map(str, online_users))
+                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                        self.tcpClientSocket.send(response.encode())
+                
+                #    GET CHAT ROOMS   #
+                elif message[0]=="GET_ROOMS":
+                        chat_rooms_List = db.get_chat_rooms()
+                        response =" ".join(map(str, chat_rooms_List))
+                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                        self.tcpClientSocket.send(response.encode())
+
+                #   Search Room  #
+                elif message[0] == "ROOM":
+                    if db.does_room_exist(message[1]):
+                        room_info = db.get_room_details(message[1])
+                        response = "search-success " + room_info[0] + " " + " ".join(map(str, room_info[1]))
+                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                        self.tcpClientSocket.send(response.encode())
+                    # enters if username does not exist 
+                    else:
+                        response = "search-Room-not-found"
+                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                        self.tcpClientSocket.send(response.encode())
+
+                #   JOIN_ROOM  #
+                elif message[0] == "JoinRoom":
+                    if db.is_user_in_chat_room(message[3],message[1]):
+                        response = "Already-in"
+                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
+                        self.tcpClientSocket.send(response.encode())
+                    else:
+                        retrievedPass = db.get_room_pass(message[1])
+                        if message[2] == retrievedPass:
+                            db.Join_room(message[1],message[3])
+                            response = "join-success"
+                            logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
+                            self.tcpClientSocket.send(response.encode())
+                        else:
+                            response = "Wrong-pass"
+                            logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
+                            self.tcpClientSocket.send(response.encode())
+
+
             except OSError as oErr:
                 logging.error("OSError: {0}".format(oErr)) 
 

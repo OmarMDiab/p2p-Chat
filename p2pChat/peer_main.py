@@ -1,8 +1,6 @@
 from peer_server import *
 import hashlib
 import getpass
-from config import db
-
 
 # main process of the peer
 class peerMain:
@@ -33,8 +31,9 @@ class peerMain:
         self.timer = None
         
         choice = "0"
-        log_flag=False  # am i logged in?
-        i_flag=True  # input flag
+        log_flag=False  # Am i logged in?
+        i_flag=True     # input flag
+        
 
         # log file initialization
         logging.basicConfig(filename="peer.log", level=logging.INFO)
@@ -95,19 +94,22 @@ class peerMain:
                         i_flag=True    # Reset Flag
 
             else:
-                choice=input("\nMain Menu: -\n1) Profile\n2) Show Online users\n3) search a user\n4) Start a chat\n5) Logout\n                    press <q> to exit\n")
+                choice=input("\nMain Menu: -\n1) Profile\n2) Show Online users\n3) search a user\n4) Chatrooms\n5) Logout\n                    press <q> to exit\n")
                 # if choice is 3 and user is logged in, then user is logged out
                 # and peer variables are set, and server and client sockets are closed
 
 
                 if choice=="1":
-                    ip,usr_port=db.get_peer_ip_port(username)
+                    searchStatus = self.searchUser(username)
+                    split_values = searchStatus.split(":")
+                    ip = split_values[0]
+                    usr_port = split_values[1]
                     print(Fore.BLUE +  f"Username: {username}\nip: {ip}\nPort: {usr_port}")
 
 
 
                 if choice=="2":
-                    online_users=db.get_online_usernames()
+                    online_users=self.get_online_users()
                     print("\nOnline User: -")
                     for user in online_users:
                         if user != username:
@@ -116,11 +118,11 @@ class peerMain:
 
 # >>>>>>>>>>>>>>>>>>>>>>> search a user
                 if choice == "3" and self.isOnline:
-                    username = input("Username to be searched: ")
-                    searchStatus = self.searchUser(username)
+                    search_user = input("Username to be searched: ")
+                    searchStatus = self.searchUser(search_user)
                     # if user is found its ip address is shown to user
                     if searchStatus is not None and searchStatus != 0:
-                        print("IP address of " + username + " is " + searchStatus)
+                        print("IP address of " + search_user + " is " + searchStatus)
                         print("\nDo you want to start chat with him?")
                         choice=input("press [y]:Yes or [n]:Not now\n")
                         if choice=="y":
@@ -130,7 +132,7 @@ class peerMain:
 
 
 # >>>>>>>>>>>>>>>>>>>>>>>> Start a chat
-                if choice == "4" and self.isOnline:
+                if choice == "wla_7aga" and self.isOnline:
                     if i_flag:
                         username = input("Enter the username of user to start chat: ")
                         searchStatus = self.searchUser(username)
@@ -146,12 +148,39 @@ class peerMain:
                         self.peerClient.start()
                         self.peerClient.join()
 
+                if choice =="4" and self.isOnline:
+                    while choice !="b":
+                        choice=input("\nChat rooms menu: -\n1) Create Room\n2) Show Chat rooms\n3) Search or Join Chat room\n                        press <b> to go back to main menu\n")
+                        
+                        if choice=="1":
+                            print(">> Create Room: -")
+                            room_name = input("Room Name: ")
+                            password = input("Password: ")
+                            self.CreateRoom(room_name, password, username)
+
+                        elif choice == "2":
+                            Chatrooms=self.get_Chatrooms()
+                            print("Chat Rooms: -")
+                            for chatroom in Chatrooms:
+                                print(Fore.BLUE + f">> {chatroom}")
+
+                        elif choice =="3":
+                            print("Search ChatRoom: -")
+                            room_name = input("Enter the room_name: ")
+                            Admin,users = self.Search_room(room_name)
+                            if Admin is not None:
+                                print(Fore.YELLOW + f"Admin: {Admin}")
+                                print(Fore.BLUE + f"Users: {users}")
+                                print("Do you want to Join the Chatroom?")
+                                choice=input("[y]:yes / [n]:no\n")
+                                room_status = 3
+                                if choice =="y":
+                                    while room_status==3:
+                                        room_pass = input("Enter room Password: ")
+                                        room_status = self.join_chat(room_name,room_pass,username)
+                                        
 
                 
-
-
-
-
                 if choice == "5" and self.isOnline:
                     self.logout(1)
                     self.isOnline = False
@@ -165,6 +194,7 @@ class peerMain:
                     log_flag=False
                     del self  # To reserve memory
                     new_obj=peerMain()  # to initialize a new peer after he Logs out!
+                    
 
 
                 # if this is the receiver side then it will get the prompt to accept an incoming request during the main loop
@@ -197,8 +227,64 @@ class peerMain:
             self.tcpClientSocket.close()
 
 
+    # room creation function
+    def CreateRoom(self, room_name, password,Admin):
+        message = "CREATE " + room_name + " " + password + " " + Admin
+        logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
+        self.tcpClientSocket.send(message.encode())
+        response = self.tcpClientSocket.recv(1024).decode()
+        logging.info("Received from " + self.registryName + " -> " + response)
+        if response == "join-success":
+            print(f"Chat room '{room_name}' created by {Admin}.")
+        elif response == "join-exist":
+            print("Room name exists!")
 
+    def Search_room(self, room_name):
+        message = "ROOM " + room_name
+        logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
+        self.tcpClientSocket.send(message.encode())
+        response = self.tcpClientSocket.recv(1024).decode().split()
+        logging.info("Received from " + self.registryName + " -> " + " ".join(response))
+        if response[0] == "search-success":
+            print(room_name + " is found successfully...\n")
+            return response[1],response[2:]   # 1: Admin , 2: Users list
+        elif response[0] == "search-Room-not-found":
+            print(room_name + " is not found")
+            return None
+        
+    # Join room function
+    def join_chat(self, room_name,room_pass,username):
+        message = "JoinRoom " + room_name + " " + room_pass + " " + username
+        logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
+        self.tcpClientSocket.send(message.encode())
+        response = self.tcpClientSocket.recv(1024).decode()
+        logging.info("Received from " + self.registryName + " -> " + response)
+        if response == "join-success":
+            print(f"Joined {room_name} successfully...")
+            return 1
+        elif response =="Already-in":
+            print("You already in the chat room!")
+            return 2
+        elif response == "Wrong-pass":
+            print(f"{response} Try again\n")
+            return 3
+        
 
+    def get_online_users(self):
+        message = "GET_USERS "
+        logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
+        self.tcpClientSocket.send(message.encode())
+        response = self.tcpClientSocket.recv(1024).decode().split()
+        logging.info("Received from " + self.registryName + " -> " + " ".join(response))
+        return response
+    
+    def get_Chatrooms(self):
+        message = "GET_ROOMS "
+        logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
+        self.tcpClientSocket.send(message.encode())
+        response = self.tcpClientSocket.recv(1024).decode().split()
+        logging.info("Received from " + self.registryName + " -> " + " ".join(response))
+        return response
 
     # account creation function
     def createAccount(self, username, password):
