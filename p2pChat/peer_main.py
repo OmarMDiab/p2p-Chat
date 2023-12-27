@@ -88,7 +88,8 @@ class peerMain:
                         self.peerServer.start()
                         # hello message is sent to registry
                         self.sendHelloMessage()
-                        self.peerServer.tcpServerSocket
+                        print(f"Soket = {self.peerServer.tcpServerSocket}\n")
+                        self.store_soket(username,self.peerServer.tcpServerSocket)
                         print( Fore.GREEN + f"Hello {username} ^^")
                         log_flag=True  # to know if he logged_in
                         i_flag=True    # Reset Flag
@@ -165,6 +166,9 @@ class peerMain:
                                         r_name=input("Enter Room Name: ")
                                         self.LeaveRoom(r_name,username)
                                         print("Making Another Check....")
+                                    elif choice =="2":
+                                        ss=self.get_sokets()
+                                        print(f"sokets: -\n{ss}")
                                 else:
                                     print(Fore.RED + "You are not in any room :(")
                                     choice = "b"
@@ -261,7 +265,7 @@ class peerMain:
             print("Room name exists!")
 
     def store_soket(self,username,soket):
-        message = "STORE " + username + " " + soket
+        message = "STORE " + username + " " + str(soket)
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
         self.tcpClientSocket.send(message.encode())
         response = self.tcpClientSocket.recv(1024).decode()

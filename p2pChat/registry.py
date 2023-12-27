@@ -10,7 +10,7 @@ import select
 import logging
 import db
 from config import *
-
+import json
 # This class is used to process the peer messages sent to registry
 # for each peer connected to registry, a new client thread is created
 class ClientThread(threading.Thread):
@@ -195,18 +195,18 @@ class ClientThread(threading.Thread):
                                 response= "no-rooms"
                                 logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
                                 self.tcpClientSocket.send(response.encode())
-
-                #    Add soket   #
-                elif message[0]=="STORE":
-                    tcp_Clients_Sockets.append(message[1],message[2])
-                    response ="Stored"
-                    logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                # Add socket #
+                elif message[0] == "STORE":
+                    tcp_Clients_Sockets[message[1]] = message[2:]
+                    response = "Stored"
+                    logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
                     self.tcpClientSocket.send(response.encode())
+
 
                 #    Get Sokets   #
                 elif message[0] == "GETSOKETS":
-                    response = " ".join(map(str, tcp_Clients_Sockets))
-                    logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                    response = json.dumps(tcp_Clients_Sockets)
+                    logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
                     self.tcpClientSocket.send(response.encode())
 
 
@@ -286,7 +286,7 @@ class UDPServer(threading.Thread):
     def resetTimer(self):
         self.timer.cancel()
                                        # >>>>>>>>>>>> Timer of hello time (we increased it to more flexible if user have bad connection)        
-        self.timer = threading.Timer(5, self.waitHelloMessage) 
+        self.timer = threading.Timer(2, self.waitHelloMessage) 
         self.timer.start()
 
 
@@ -338,7 +338,7 @@ logging.basicConfig(filename="registry.log", level=logging.INFO)
 # as long as at least a socket exists to listen registry runs
 while inputs:
 
-    print("Listening for incoming connections...")
+    #print("Listening for incoming connections...")
     # monitors for the incoming connections
     readable, writable, exceptional = select.select(inputs, [], [])
     for s in readable:
@@ -360,7 +360,7 @@ while inputs:
                 if message[1] in tcpThreads:
                     # resets the timeout for that peer since the hello message is received
                     tcpThreads[message[1]].resetTimeout()
-                    print("Hello is received from " + message[1])
+                    #print("Hello is received from " + message[1])
                     logging.info("Received from " + clientAddress[0] + ":" + str(clientAddress[1]) + " -> " + " ".join(message))
                     
 # registry tcp socket is closed
