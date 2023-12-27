@@ -29,6 +29,7 @@ class ClientThread(threading.Thread):
         self.udpServer = None
         print("New thread started for " + ip + ":" + str(port))
 
+
     # main of the thread
     def run(self):
         # locks for thread which will be used for thread synchronization
@@ -176,10 +177,38 @@ class ClientThread(threading.Thread):
                 
                 #    GET CHAT ROOMS   #
                 elif message[0]=="GET_ROOMS":
-                        chat_rooms_List = db.get_chat_rooms()
-                        response =" ".join(map(str, chat_rooms_List))
-                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
-                        self.tcpClientSocket.send(response.encode())
+                        
+                        if len(message)==1:
+                            chat_rooms_List = db.get_chat_rooms()
+                            response =" ".join(map(str, chat_rooms_List))
+                            logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                            self.tcpClientSocket.send(response.encode())
+                            
+                        else:
+                            
+                            chat_rooms_List = db.get_chat_rooms(message[1])
+                            if chat_rooms_List is not None:
+                                response =" ".join(map(str, chat_rooms_List))
+                                logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                                self.tcpClientSocket.send(response.encode())
+                            else:  
+                                response= "no-rooms"
+                                logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                                self.tcpClientSocket.send(response.encode())
+
+                #    Add soket   #
+                elif message[0]=="STORE":
+                    tcp_Clients_Sockets.append(message[1],message[2])
+                    response ="Stored"
+                    logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                    self.tcpClientSocket.send(response.encode())
+
+                #    Get Sokets   #
+                elif message[0] == "GETSOKETS":
+                    response = " ".join(map(str, tcp_Clients_Sockets))
+                    logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                    self.tcpClientSocket.send(response.encode())
+
 
                 #   Search Room  #
                 elif message[0] == "ROOM":
@@ -212,9 +241,16 @@ class ClientThread(threading.Thread):
                             logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
                             self.tcpClientSocket.send(response.encode())
 
+            #      Leave Room   #
+                elif message[0] == "Leave":
+                    _,response=db.remove_user_from_room(message[1],message[2])
+                    logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
+                    self.tcpClientSocket.send(response.encode())
+                    
 
             except OSError as oErr:
                 logging.error("OSError: {0}".format(oErr)) 
+
 
 
     # function for resettin the timeout for the udp timer thread
@@ -249,9 +285,7 @@ class UDPServer(threading.Thread):
     # resets the timer for udp server
     def resetTimer(self):
         self.timer.cancel()
-
-                                       # >>>>>>>>>>>> Timer of hello time (we increased it to more flexible if user have bad connection)
-        
+                                       # >>>>>>>>>>>> Timer of hello time (we increased it to more flexible if user have bad connection)        
         self.timer = threading.Timer(5, self.waitHelloMessage) 
         self.timer.start()
 
@@ -285,6 +319,8 @@ onlinePeers = {}
 accounts = {}
 # tcpThreads list for online client's thread
 tcpThreads = {}
+
+tcp_Clients_Sockets={}
 
 #tcp and udp socket initializations
 tcpSocket = socket(AF_INET, SOCK_STREAM)

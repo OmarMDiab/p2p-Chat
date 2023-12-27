@@ -1,7 +1,7 @@
 from peer_server import *
 import hashlib
 import getpass
-
+import ast
 # main process of the peer
 class peerMain:
     # peer initializations
@@ -88,7 +88,7 @@ class peerMain:
                         self.peerServer.start()
                         # hello message is sent to registry
                         self.sendHelloMessage()
-
+                        self.peerServer.tcpServerSocket
                         print( Fore.GREEN + f"Hello {username} ^^")
                         log_flag=True  # to know if he logged_in
                         i_flag=True    # Reset Flag
@@ -150,21 +150,39 @@ class peerMain:
 
                 if choice =="4" and self.isOnline:
                     while choice !="b":
-                        choice=input("\nChat rooms menu: -\n1) Create Room\n2) Show Chat rooms\n3) Search or Join Chat room\n                        press <b> to go back to main menu\n")
+                        choice=input("\nChat rooms menu: -\n1) My Rooms\n2) Create Room\n3) Show Chat rooms\n4) Search or Join Chat room\n                        press <b> to go back to main menu\n")
                         
-                        if choice=="1":
+
+                        if choice =="1":
+                            while choice!="b":
+                                Joined_rooms = self.get_Chatrooms(username)
+                                if Joined_rooms is not None:
+                                    print("Joined Chat Rooms: -")
+                                    for chatroom in Joined_rooms:
+                                        print(Fore.BLUE + f">> {chatroom}")
+                                    choice = input("\n1) Leave a room\n2) Enter Room\n                        press <b> to go back to chat room menu\n")
+                                    if choice == "1":
+                                        r_name=input("Enter Room Name: ")
+                                        self.LeaveRoom(r_name,username)
+                                        print("Making Another Check....")
+                                else:
+                                    print(Fore.RED + "You are not in any room :(")
+                                    choice = "b"
+                                
+
+                        elif choice=="2":
                             print(">> Create Room: -")
                             room_name = input("Room Name: ")
                             password = input("Password: ")
                             self.CreateRoom(room_name, password, username)
 
-                        elif choice == "2":
-                            Chatrooms=self.get_Chatrooms()
+                        elif choice == "3":
+                            Chatrooms=self.get_Chatrooms(" ")
                             print("Chat Rooms: -")
                             for chatroom in Chatrooms:
                                 print(Fore.BLUE + f">> {chatroom}")
 
-                        elif choice =="3":
+                        elif choice =="4":
                             print("Search ChatRoom: -")
                             room_name = input("Enter the room_name: ")
                             Admin,users = self.Search_room(room_name)
@@ -178,6 +196,9 @@ class peerMain:
                                     while room_status==3:
                                         room_pass = input("Enter room Password: ")
                                         room_status = self.join_chat(room_name,room_pass,username)
+                                        #sokets=self.get_sokets()
+                                        #print(f"sokets = {sokets}")
+                        choice="reset"
                                         
 
                 
@@ -239,6 +260,27 @@ class peerMain:
         elif response == "join-exist":
             print("Room name exists!")
 
+    def store_soket(self,username,soket):
+        message = "STORE " + username + " " + soket
+        logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
+        self.tcpClientSocket.send(message.encode())
+        response = self.tcpClientSocket.recv(1024).decode()
+        logging.info("Received from " + self.registryName + " -> " + response)
+    
+    def get_sokets(self):
+        message = "GETSOKETS "
+        logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
+        self.tcpClientSocket.send(message.encode())
+        response = self.tcpClientSocket.recv(1024).decode()
+        logging.info("Received from " + self.registryName + " -> " + response)
+        # Use ast.literal_eval to safely evaluate the string as a dictionary
+        try:
+            sockets_dict = ast.literal_eval(response)
+            return sockets_dict
+        except (SyntaxError, ValueError) as e:
+            logging.error("Error parsing response: " + str(e))
+            return None
+
     def Search_room(self, room_name):
         message = "ROOM " + room_name
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
@@ -269,6 +311,14 @@ class peerMain:
             print(f"{response} Try again\n")
             return 3
         
+    def LeaveRoom(self,room_name,username):
+        message = "Leave "+ room_name +" "+ username
+        logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
+        self.tcpClientSocket.send(message.encode())
+        response = self.tcpClientSocket.recv(1024).decode()
+        logging.info("Received from " + self.registryName + " -> " + response)
+        print(response)
+
 
     def get_online_users(self):
         message = "GET_USERS "
@@ -278,14 +328,21 @@ class peerMain:
         logging.info("Received from " + self.registryName + " -> " + " ".join(response))
         return response
     
-    def get_Chatrooms(self):
-        message = "GET_ROOMS "
+    def get_Chatrooms(self,username):
+        message = "GET_ROOMS " + username
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
         self.tcpClientSocket.send(message.encode())
-        response = self.tcpClientSocket.recv(1024).decode().split()
-        logging.info("Received from " + self.registryName + " -> " + " ".join(response))
-        return response
-
+        response = self.tcpClientSocket.recv(1024).decode()
+        if response != "no-rooms":
+            response=response.split()
+            logging.info("Received from " + self.registryName + " -> " + " ".join(response))
+            return response
+        else:
+            logging.info("Received from " + self.registryName + " -> " + response)
+            return None
+            
+    
+    
     # account creation function
     def createAccount(self, username, password):
         # join message to create an account is composed and sent to registry

@@ -72,17 +72,24 @@ class DB:
     def does_room_exist(self, room_name):
         return self.db.Chatrooms.count_documents({'room_name': room_name}) > 0
     
-    def get_chat_rooms(self):
-        chatrooms = self.db.Chatrooms.find()
-        room_names = []
-
-        for Chat_room in chatrooms:
-            if "room_name" in Chat_room:
-                room_names.append(Chat_room["room_name"])
+    def get_chat_rooms(self, username=None):
+        if username:
+            # Return specific user's room names
+            user_account = self.db.accounts.find_one({"username": username})
+            if user_account:
+                chat_rooms = user_account.get("ChatRooms", [])
+                if not chat_rooms:
+                    return None
+                else:
+                    return chat_rooms
             else:
-                print(f"Error: Username not found for online peer {Chat_room}")
+                return None
+        else:
+            # Return all room names
+            chatrooms = self.db.Chatrooms.find()
+            room_names = [chat_room["room_name"] for chat_room in chatrooms]
+            return room_names
 
-        return room_names
     
     def get_room_details(self, room_name):
         room = self.db.Chatrooms.find_one({"room_name": room_name})
@@ -111,6 +118,29 @@ class DB:
     
     def is_user_in_chat_room(self, username, room_name):
         return self.db.Chatrooms.count_documents({'room_name': room_name, 'users': username}) > 0
+
+
+    def remove_user_from_room(self, room_name, user_to_remove):
+        # Find the chat room with the specified name
+        chat_room = self.db.Chatrooms.find_one({"room_name": room_name})
+        # Remove the user from the room's user list
+        chat_room["users"].remove(user_to_remove)
+        # Update the database with the modified chat room
+        self.db.Chatrooms.update_one(
+            {"room_name": room_name},
+            {"$set": {"users": chat_room["users"]}}
+        )
+
+        # Update the user's account to remove the room from ChatRooms
+        self.db.accounts.update_one(
+            {"username": user_to_remove},
+            {"$pull": {"ChatRooms": room_name}}
+        )
+        
+        return True, f"User '{user_to_remove}' removed from the room '{room_name}'."
+
+
+
 
 
         

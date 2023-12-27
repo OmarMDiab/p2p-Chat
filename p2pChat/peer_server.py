@@ -16,8 +16,6 @@ init(autoreset=True)
 
 # Server side of peer
 class PeerServer(threading.Thread):
-
-
     # Peer server initialization
     def __init__(self, username, peerServerPort):
         threading.Thread.__init__(self)
@@ -180,6 +178,7 @@ class PeerClient(threading.Thread):
 
         # keeps if this client is ending the chat or not
         self.isEndingChat = False
+        
 
 
     # main method of the peer client thread
