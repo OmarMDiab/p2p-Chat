@@ -90,6 +90,9 @@ class peerMain:
                         # hello message is sent to registry
                         self.sendHelloMessage()
                         print(f"Soket = {self.peerServer.tcpServerSocket}\n")
+                        search_status = self.searchUser(username)
+                        search_status = search_status.split(":")
+                        self.store_soket(username,search_status[0], search_status[1])
                         print( Fore.GREEN + f"Hello {username} ^^")
                         log_flag=True  # to know if he logged_in
                         i_flag=True    # Reset Flag
@@ -187,7 +190,6 @@ class peerMain:
                                                             chat_room_name = room_name
                                                             peer_server = PeerServer(username, int(search_status[1]))
                                                             response_received = None
-                                                            self.store_soket(username,search_status[0], search_status[1])
                                                             sokets=self.get_sokets()
                                                             peer_client = PeerClient(search_status[0], int(search_status[1]), username, peer_server, response_received, sokets)
                                                             peer_client.start()
