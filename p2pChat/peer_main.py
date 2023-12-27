@@ -167,6 +167,7 @@ class peerMain:
                                         self.LeaveRoom(r_name,username)
                                         print("Making Another Check....")
                                     elif choice =="2":
+                                        self.run_chatroom(room_name, username, self.peerServer)  # Start chat room functionality
                                         ss=self.get_sokets()
                                         print(f"sokets: -\n{ss}")
                                 else:
