@@ -9,6 +9,7 @@ import threading
 import select
 import logging
 import db
+import pickle
 from config import *
 import json
 # This class is used to process the peer messages sent to registry
@@ -108,7 +109,7 @@ class ClientThread(threading.Thread):
                             finally:
                                 self.lock.release()
                             
-                            db.user_login(message[1], self.ip, message[3])  
+                            db.user_login(message[1], self.ip, message[3], message[4])  
 
                             # login-success is sent to peer,
                             # and a udp server thread is created for this peer, and thread is started
@@ -174,7 +175,6 @@ class ClientThread(threading.Thread):
                         response =" ".join(map(str, online_users))
                         logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
                         self.tcpClientSocket.send(response.encode())
-                
                 #    GET CHAT ROOMS   #
                 elif message[0]=="GET_ROOMS":
                         
@@ -222,6 +222,20 @@ class ClientThread(threading.Thread):
                         response = "search-Room-not-found"
                         logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
                         self.tcpClientSocket.send(response.encode())
+                        
+                elif message[0] == "GET_ROOM":
+                    if db.does_room_exist(message[1]):
+                        room_info = db.get_room_members(message[1])
+                        response = {"result": "success", **room_info}
+                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + str(response)) 
+                        response = pickle.dumps(response)
+                        self.tcpClientSocket.send(response)
+                    # if room does not exist 
+                    else:
+                        response = {"result": "error"}
+                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + str(response))
+                        response = pickle.dumps(response)
+                        self.tcpClientSocket.send(response)
 
                 #   JOIN_ROOM  #
                 elif message[0] == "JoinRoom":

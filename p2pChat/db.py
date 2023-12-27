@@ -23,11 +23,12 @@ class DB:
     def is_account_online(self, username):
         return self.db.online_peers.count_documents({"username": username}) > 0
 
-    def user_login(self, username, ip, port):
+    def user_login(self, username, ip, portTCP, portUDP):
         online_peer = {
             "username": username,
             "ip": ip,
-            "port": port
+            "portTCP": portTCP,
+            "portUDP": portUDP
         }
         self.db.online_peers.insert_one(online_peer)
 
@@ -36,8 +37,8 @@ class DB:
 
     def get_peer_ip_port(self, username):
         online_peer = self.db.online_peers.find_one({"username": username})
-        if online_peer and "ip" in online_peer and "port" in online_peer:
-            return online_peer["ip"], online_peer["port"]
+        if online_peer and "ip" in online_peer and "portTCP" in online_peer:
+            return online_peer["ip"], online_peer["portTCP"]
         else:
             print(f"Error: Required fields not found for {username}")
             return None
@@ -98,7 +99,15 @@ class DB:
         else:
             print(f"Error: Required fields not found for {room_name}")
             return None
-        
+    
+    def get_room_members(self, room_name):
+        room = self.db.Chatrooms.find_one({"room_name": room_name})
+        if room and "users" in room and "Admin" in room:
+            online_users_in_room = list(self.db.online_peers.find({"username": {"$in": room["users"]}}))
+            return {"admin":room["Admin"],"users": online_users_in_room}
+        else:
+            print(f"Error: Required fields not found for {room_name}")
+            return None   
     
     def Join_room(self,room_name ,username):
         

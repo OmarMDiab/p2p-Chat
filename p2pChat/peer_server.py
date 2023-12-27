@@ -9,6 +9,8 @@ import threading
 import time
 import select
 import logging
+import globals
+import pickle
 from colorama import init, Fore, Back, Style
 
 
@@ -17,14 +19,18 @@ init(autoreset=True)
 # Server side of peer
 class PeerServer(threading.Thread):
     # Peer server initialization
-    def __init__(self, username, peerServerPort):
+    def __init__(self, username, peerServerPort, peerServerPortUDP):
         threading.Thread.__init__(self)
         # keeps the username of the peer
         self.username = username
         # tcp socket for peer server
         self.tcpServerSocket = socket(AF_INET, SOCK_STREAM)
-        # port number of the peer server
+        # udp socket for peer server
+        self.udpServerSocket = socket(AF_INET, SOCK_DGRAM)
+        # port number of the peer server for tcp
         self.peerServerPort = peerServerPort
+        # port number of the peer server for udp
+        self.peerServerPortUDP = peerServerPortUDP
         # if 1, then user is already chatting with someone
         # if 0, then user is not chatting with anyone
         self.isChatRequested = 0
@@ -38,6 +44,10 @@ class PeerServer(threading.Thread):
         self.isOnline = True
         # keeps the username of the peer that this peer is chatting with
         self.chattingClientName = None
+        
+        print("Peer server is created...")
+        print ("Peer server port is " + str(self.peerServerPort))
+        print ("Peer server port for UDP is " + str(self.peerServerPortUDP))
     
 
     # main method of the peer server thread
@@ -61,8 +71,10 @@ class PeerServer(threading.Thread):
         # socket initializations for the server of the peer
         self.tcpServerSocket.bind((self.peerServerHostname, self.peerServerPort))
         self.tcpServerSocket.listen(4)
+        
+        self.udpServerSocket.bind((self.peerServerHostname, self.peerServerPortUDP))
         # inputs sockets that should be listened
-        inputs = [self.tcpServerSocket]
+        inputs = [self.tcpServerSocket, self.udpServerSocket]
         # server listens as long as there is a socket to listen in the inputs list and the user is online
         while inputs and self.isOnline:
             # monitors for the incoming connections
@@ -86,6 +98,15 @@ class PeerServer(threading.Thread):
                             self.connectedPeerIP = addr[0]
                     # if the socket that receives the data is the one that
                     # is used to communicate with a connected peer, then enters here
+                    elif s is self.udpServerSocket:
+                        request = pickle.loads(self.udpServerSocket.recvfrom(1024)[0])
+                        # if the user is not in the room
+                        if(globals.joined_room_name != request["room_name"]):
+                            continue 
+                        if(globals.room_users.count(request["user"])==0):
+                            globals.room_users.append(request["user"])
+                        
+                        print(request["message"])
                     else:
                         # message is received from connected peer
                         messageReceived = s.recv(1024).decode()

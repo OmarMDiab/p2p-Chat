@@ -2,6 +2,8 @@ from peer_server import *
 import hashlib
 import getpass
 import ast
+import pickle
+import globals
 # main process of the peer
 class peerMain:
     # peer initializations
@@ -75,16 +77,21 @@ class peerMain:
                     sock = socket()
                     sock.bind(('', 0))
                     peerServerPort = sock.getsockname()[1]
-
-                    status = self.login(username, password, peerServerPort)
+                    
+                    sockUDP = socket(AF_INET, SOCK_DGRAM) 
+                    sockUDP.bind(('', 0))
+                    peerServerUDPPort = sockUDP.getsockname()[1]
+                    
+                    status = self.login(username, password, peerServerPort, peerServerUDPPort)
                     # is user logs in successfully, peer variables are set
                     if status == 1:
                         self.isOnline = True
                         self.loginCredentials = (username, password)
                         self.peerServerPort = peerServerPort
+                        self.peerServerUDPPort = peerServerUDPPort
                         
                         # creates the server thread for this peer, and runs it
-                        self.peerServer = PeerServer(self.loginCredentials[0], self.peerServerPort)
+                        self.peerServer = PeerServer(self.loginCredentials[0], self.peerServerPort, self.peerServerUDPPort)
                         self.peerServer.start()
                         # hello message is sent to registry
                         self.sendHelloMessage()
@@ -167,8 +174,8 @@ class peerMain:
                                         self.LeaveRoom(r_name,username)
                                         print("Making Another Check....")
                                     elif choice =="2":
-                                        ss=self.get_sokets()
-                                        print(f"sokets: -\n{ss}")
+                                        room_name=input("Enter Room Name: ")
+                                        self.enter_chat_room(room_name, username)
                                 else:
                                     print(Fore.RED + "You are not in any room :(")
                                     choice = "b"
@@ -250,8 +257,53 @@ class peerMain:
         # socket of the client is closed
         if choice != "CANCEL":
             self.tcpClientSocket.close()
+            
+            
+    def enter_chat_room(self, room_name, username):
+        message = "GET_ROOM " + room_name
+        logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
+        self.tcpClientSocket.send(message.encode())
+        response = pickle.loads(self.tcpClientSocket.recv(1024))
+        logging.info("Received from " + self.registryName + " -> " + str(response))
+        if response["result"] == "success":
+            print(f"You joined {room_name} room successfully...")
+            globals.room_users = response["users"]
+            globals.joined_room_name = room_name
+        else:
+            print("Could not join the room!")
+            return
 
+        sender_socket= socket(AF_INET, SOCK_DGRAM)
+        
+        me = [i for i in globals.room_users if i['username']==username][0]
+        
+        self.send_message_to_room_users(sender_socket, username + " joined the room", me, room_name)
 
+        
+                    
+        while True:
+            message = input()
+            if message == "exit":
+                globals.room_users = []
+                globals.joined_room_name = ""
+                break
+            else:
+                self.send_message_to_room_users(sender_socket, username + ": " + message, me, room_name)
+                    
+    def send_message_to_room_users(self, sender_socket, message, me, room_name):
+        data = { 
+            "message": message,
+            "user": me,
+            "room_name": room_name
+        }
+        for user in globals.room_users: 
+            try:
+                if user['username'] != me["username"]:
+                    sender_socket.sendto(pickle.dumps(data), (user['ip'],int(user['portUDP'])))
+            except Exception as e:
+                print(e)
+                print(f"Could not send message to {user['username']}")
+                continue
     # room creation function
     def CreateRoom(self, room_name, password,Admin):
         message = "CREATE " + room_name + " " + password + " " + Admin
@@ -363,10 +415,10 @@ class peerMain:
             print("choose another username or login...")
 
     # login function
-    def login(self, username, password, peerServerPort):
+    def login(self, username, password, peerServerPort, peerServerUDPPort):
         # a login message is composed and sent to registry
         # an integer is returned according to each response
-        message = "LOGIN " + username + " " + password + " " + str(peerServerPort)
+        message = "LOGIN " + username + " " + password + " " + str(peerServerPort) + " " + str(peerServerUDPPort)
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
         self.tcpClientSocket.send(message.encode())
         response = self.tcpClientSocket.recv(1024).decode()
