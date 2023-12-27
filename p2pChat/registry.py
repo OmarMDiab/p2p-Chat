@@ -197,7 +197,9 @@ class ClientThread(threading.Thread):
                                 self.tcpClientSocket.send(response.encode())
                 # Add socket #
                 elif message[0] == "STORE":
-                    tcp_Clients_Sockets[message[1]] = message[2:]
+                    username = message[1]
+                    socket_info = {"ip": message[2], "port": int(message[3])}
+                    tcp_Clients_Sockets[username] = socket_info
                     response = "Stored"
                     logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
                     self.tcpClientSocket.send(response.encode())

@@ -2,6 +2,7 @@ from peer_server import *
 import hashlib
 import getpass
 import ast
+import json
 # main process of the peer
 class peerMain:
     # peer initializations
@@ -89,7 +90,6 @@ class peerMain:
                         # hello message is sent to registry
                         self.sendHelloMessage()
                         print(f"Soket = {self.peerServer.tcpServerSocket}\n")
-                        self.store_soket(username,self.peerServer.tcpServerSocket)
                         print( Fore.GREEN + f"Hello {username} ^^")
                         log_flag=True  # to know if he logged_in
                         i_flag=True    # Reset Flag
@@ -167,9 +167,32 @@ class peerMain:
                                         self.LeaveRoom(r_name,username)
                                         print("Making Another Check....")
                                     elif choice =="2":
-                                        self.run_chatroom(room_name, username, self.peerServer)  # Start chat room functionality
-                                        ss=self.get_sokets()
-                                        print(f"sokets: -\n{ss}")
+                                        room_name = input("Enter the room_name: ")
+                                        Admin,users = self.Search_room(room_name)
+                                        if Admin is not None:
+                                            print(Fore.YELLOW + f"Admin: {Admin}")
+                                            print(Fore.BLUE + f"Users: {users}")
+                                            print("Do you want to start the Chatroom?")
+                                            choice=input("[y]:yes / [n]:no\n")
+                                            room_status = 3
+                                            if choice =="y":
+                                                while room_status==3:
+                                                    room_pass = input("Enter room Password: ")
+                                                    room_status = self.join_chat(room_name,room_pass,username)
+                                                    if room_status !=3:
+                                                        search_status = self.searchUser(username)
+                                                        if search_status is not None and search_status != 0:
+                                                            if not isinstance(search_status, list):
+                                                                search_status = search_status.split(":")
+                                                            chat_room_name = room_name
+                                                            peer_server = PeerServer(username, int(search_status[1]))
+                                                            response_received = None
+                                                            self.store_soket(username,search_status[0], search_status[1])
+                                                            sokets=self.get_sokets()
+                                                            peer_client = PeerClient(search_status[0], int(search_status[1]), username, peer_server, response_received, sokets)
+                                                            peer_client.start()
+                                                            peer_client.join()
+                                                        break 
                                 else:
                                     print(Fore.RED + "You are not in any room :(")
                                     choice = "b"
@@ -265,12 +288,13 @@ class peerMain:
         elif response == "join-exist":
             print("Room name exists!")
 
-    def store_soket(self,username,soket):
-        message = "STORE " + username + " " + str(soket)
-        logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
+    def store_soket(self, username, ip, port):
+        # Send the username, IP, and port as a message
+        message = f"STORE {username} {ip} {port}"
+        logging.info(f"Send to {self.registryName}:{str(self.registryPort)} -> {message}")
         self.tcpClientSocket.send(message.encode())
         response = self.tcpClientSocket.recv(1024).decode()
-        logging.info("Received from " + self.registryName + " -> " + response)
+        logging.info(f"Received from {self.registryName} -> {response}")
     
     def get_sokets(self):
         message = "GETSOKETS "
@@ -278,13 +302,21 @@ class peerMain:
         self.tcpClientSocket.send(message.encode())
         response = self.tcpClientSocket.recv(1024).decode()
         logging.info("Received from " + self.registryName + " -> " + response)
-        # Use ast.literal_eval to safely evaluate the string as a dictionary
-        try:
-            sockets_dict = ast.literal_eval(response)
-            return sockets_dict
-        except (SyntaxError, ValueError) as e:
-            logging.error("Error parsing response: " + str(e))
-            return None
+
+        sockets_info = json.loads(response)
+        
+        sockets = {}
+        online_users=self.get_online_users()
+        for username, info in sockets_info.items():
+            # print("info is: ")
+            # print(info)
+            if username in online_users:
+                socket_obj = socket(AF_INET, SOCK_STREAM)
+                socket_obj.connect((info['ip'], int(info['port'])))
+                sockets[username] = socket_obj
+
+        return sockets
+
 
     def Search_room(self, room_name):
         message = "ROOM " + room_name
