@@ -64,7 +64,7 @@ class ClientThread(threading.Thread):
 
 
                 #   CREATE ACC    #
-                elif message[0] == "JOIN":
+                elif message[0] == "CREATE_NEW_ACCOUNT":
                     # join-exist is sent to peer,
                     # if an account with this username already exists
                     if db.is_account_exist(message[1]):
@@ -156,7 +156,7 @@ class ClientThread(threading.Thread):
                         # and sends the related response to peer
                         if db.is_account_online(message[1]):
                             peer_info = db.get_peer_ip_port(message[1])
-                            response = "search-success " + peer_info[0] + ":" + peer_info[1]
+                            response = "search-success " + peer_info[0] + ":" + peer_info[1] + ":" + peer_info[2]
                             logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
                             self.tcpClientSocket.send(response.encode())
                         else:

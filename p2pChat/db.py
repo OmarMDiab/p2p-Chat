@@ -37,8 +37,8 @@ class DB:
 
     def get_peer_ip_port(self, username):
         online_peer = self.db.online_peers.find_one({"username": username})
-        if online_peer and "ip" in online_peer and "portTCP" in online_peer:
-            return online_peer["ip"], online_peer["portTCP"]
+        if online_peer and "ip" in online_peer and "portTCP" in online_peer and "portUDP" in online_peer:
+            return online_peer["ip"], online_peer["portTCP"], online_peer["portUDP"]
         else:
             print(f"Error: Required fields not found for {username}")
             return None
