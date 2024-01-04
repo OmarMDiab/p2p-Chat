@@ -6,10 +6,20 @@ import pickle
 import globals
 import logging
 from socket import gaierror, timeout
+from pick import pick
+import inquirer
+import os
+from tabulate import tabulate
+import random
+
 # main process of the peer
 class peerMain:
     # peer initializations
     def __init__(self):
+        self.setup_network()
+        self.main_menu()
+                    
+    def setup_network(self):
         try:
             # ip address of the registry
             self.registryName = gethostname()
@@ -34,254 +44,298 @@ class peerMain:
             self.peerClient = None
             # timer initialization
             self.timer = None
+            
+            # log file initialization
+            logging.basicConfig(filename="peer.log", level=logging.INFO)
         except (gaierror, timeout) as e:
             logging.error(f"Network error during initialization: {e}")
             exit("Failed to initialize network settings.")
-
-        choice = "0"
-        log_flag = False  # Am i logged in?
-        i_flag = True     # input flag
-        
-        # log file initialization
-        logging.basicConfig(filename="peer.log", level=logging.INFO)
-        # as long as the user is not logged out, asks to select an option in the menu
-        print("Welcome to Chating_club_19 ^^ ")
-        
-        while choice != "q":
-            try:
-                if not log_flag:
-                    while choice != "n" and choice != "y": 
-                        print("Have an Account?")
-                        choice = input("[y] or [n]\n")
-                        if choice != "y" and choice != "n":
-                            print("invalid input!\n")
-
-                    if choice == "n":
-                        print(">>Signup")
-                        username = input("username: ")
-                        password = getpass.getpass("Password: ")
-                        password = hashlib.sha256(password.encode()).hexdigest()
-                        self.create_new_account(username, password)
-                        i_flag = False
-                        choice = "y"
-                    elif choice == "y" and not self.isOnline:
-                        if i_flag:
-                            print(">>login")
-                            username = input("username: ")
-                            # Get password input without echoing to the terminal
-                            password = getpass.getpass("Password: ")
-                            # Hash the password using SHA-256
-                            password = hashlib.sha256(password.encode()).hexdigest()
-                        print("trying Logging you in .....")
-                        
-                        # Get New Port: -
-                        sock = socket()
-                        sock.bind(('', 0))
-                        peerServerPort = sock.getsockname()[1]
-                        
-                        sockUDP = socket(AF_INET, SOCK_DGRAM) 
-                        sockUDP.bind(('', 0))
-                        peerServerUDPPort = sockUDP.getsockname()[1]
-                        
-                        status = self.login(username, password, peerServerPort, peerServerUDPPort)
-                        # is user logs in successfully, peer variables are set
-                        if status == 1:
-                            self.isOnline = True
-                            self.loginCredentials = (username, password)
-                            self.peerServerPort = peerServerPort
-                            self.peerServerUDPPort = peerServerUDPPort
-                            
-                            # creates the server thread for this peer, and runs it
-                            self.peerServer = PeerServer(self.loginCredentials[0], self.peerServerPort, self.peerServerUDPPort)
-                            self.peerServer.start()
-                            
-                            # hello message is sent to registry
-                            self.sendHelloMessage()
-                            print(f"Soket = {self.peerServer.tcpServerSocket}\n")
-                            self.store_soket(username,self.peerServer.tcpServerSocket)
-                            print(Fore.GREEN + f"Hello {username} ^^")
-                            log_flag = True  # to know if he logged_in
-                            i_flag = True    # Reset Flag
-            
-
-                else:
-                    try:
-                        choice = input("\nMain Menu: -\n1) Profile\n2) Show Online users\n3) search a user\n4) Chatrooms\n5) Logout\n                    press <q> to exit\n")
-
-                        # Profile viewing
-                        if choice == "1":
-                            try:
-                                searchStatus = self.search_for_user(username)
-                                if searchStatus:
-                                    split_values = searchStatus.split(":")
-                                    ip = split_values[0]
-                                    user_tcp_port = split_values[1]
-                                    user_udp_port = split_values[2]
-                                    print(Fore.BLUE +  f"Username: {username}\nip: {ip}\nTCP Port: {user_tcp_port}\nUDP Port: {user_udp_port}")
-                                else:
-                                    print("Failed to retrieve profile information.")
-                            except Exception as e:
-                                logging.error(f"Error retrieving profile: {e}")
-                                print("Error occurred while fetching profile information.")
-
-                        # Show online users
-                        elif choice == "2":
-                            try:
-                                online_users = self.get_online_users()
-                                print("\nOnline Users: -")
-                                for user in online_users:
-                                    if user != username:
-                                        print(Fore.BLUE + f">> {user}")
-                            except Exception as e:
-                                logging.error(f"Error fetching online users: {e}")
-                                print("Error occurred while fetching online users.")
-
-                        # Search a user
-                        elif choice == "3" and self.isOnline:
-                            try:
-                                search_user = input("Username to be searched: ")
-                                searchStatus = self.search_for_user(search_user)
-                                if searchStatus is not None and searchStatus != 0:
-                                    print("IP address of " + search_user + " is " + searchStatus)
-                                    print("\nDo you want to start chat with them?")
-                                    choice = input("press [y]:Yes or [n]:Not now\n")
-                                    if choice == "y":
-                                        choice = "4"
-                                        i_flag = False
-                                else:
-                                    print("User not found or error occurred.")
-                            except Exception as e:
-                                logging.error(f"Error searching user: {e}")
-                                print("Error occurred while searching for user.")
-
-                        # Start a chat
-                        elif choice == "wla_7aga" and self.isOnline:
-                            try:
-                                if i_flag:
-                                    username = input("Enter the username of user to start chat: ")
-                                    searchStatus = self.search_for_user(username)
-                                i_flag = True
-                                if searchStatus is not None and searchStatus != 0:
-                                    if not isinstance(searchStatus, list):
-                                        searchStatus = searchStatus.split(":")
-                                    self.peerClient = PeerClient(searchStatus[0], int(searchStatus[1]), self.loginCredentials[0], self.peerServer, None)
-                                    self.peerClient.start()
-                                    self.peerClient.join()
-                                else:
-                                    print("User not found or error occurred.")
-                            except Exception as e:
-                                logging.error(f"Error starting chat: {e}")
-                                print("Error occurred while starting chat.")
-
-                        # Chatroom management
-                        elif choice == "4" and self.isOnline:
-                            while choice != "b":
-                                try:
-                                    choice = input("\nChat rooms menu: -\n1) My Rooms\n2) Create Room\n3) Show Chat rooms\n4) Search or Join Chat room\n                        press <b> to go back to main menu\n")
-                                    
-                                    # My Rooms
-                                    if choice == "1":
-                                        while choice != "b":
-                                            Joined_rooms = self.get_all_rooms(username)
-                                            if Joined_rooms is not None:
-                                                print("Joined Chat Rooms: -")
-                                                for chatroom in Joined_rooms:
-                                                    print(Fore.BLUE + f">> {chatroom}")
-                                                choice = input("\n1) Leave a room\n2) Enter Room\n                        press <b> to go back to chat room menu\n")
-                                                if choice == "1":
-                                                    r_name = input("Enter Room Name: ")
-                                                    self.leave_room(r_name, username)
-                                                    print("Making Another Check....")
-                                                elif choice == "2":
-                                                    room_name = input("Enter Room Name: ")
-                                                    self.enter_chat_room(room_name, username)
-                                            else:
-                                                print(Fore.RED + "You are not in any room :(")
-                                                choice = "b"
-                                
-
-                                    # Create Room
-                                    elif choice == "2":
-                                        try:
-                                            print(">> Create Room: -")
-                                            room_name = input("Room Name: ")
-                                            password = input("Password: ")
-                                            self.create_new_room(room_name, password, username)
-                                        except Exception as e:
-                                            logging.error(f"Error creating room: {e}")
-                                            print("Error occurred while creating room.")
-
-                                    # Show Chat rooms
-                                    elif choice == "3":
-                                        try:
-                                            Chatrooms = self.get_all_rooms(" ")
-                                            print("Chat Rooms: -")
-                                            for chatroom in Chatrooms:
-                                                print(Fore.BLUE + f">> {chatroom}")
-                                        except Exception as e:
-                                            logging.error(f"Error fetching chat rooms: {e}")
-                                            print("Error occurred while fetching chat rooms.")
-
-                                    # Search or Join Chat room
-                                    elif choice == "4":
-                                        try:
-                                            print("Search ChatRoom: -")
-                                            room_name = input("Enter the room_name: ")
-                                            Admin, users = self.search_for_room(room_name)
-                                            if Admin is not None:
-                                                print(Fore.YELLOW + f"Admin: {Admin}")
-                                                print(Fore.BLUE + f"Users: {users}")
-                                                print("Do you want to Join the Chatroom?")
-                                                choice = input("[y]:yes / [n]:no\n")
-                                                room_status = 3
-                                                if choice == "y":
-                                                    while room_status == 3:
-                                                        room_pass = input("Enter room Password: ")
-                                                        room_status = self.join_room_chat(room_name, room_pass, username)
-                                        except Exception as e:
-                                            import traceback
-                                            logging.error(f"Error in searching or joining chat room: {traceback.format_exc()}")
-                                            print("Error occurred while handling chat rooms.")
-                                        choice = "reset"
-                                    
-                                except Exception as e:
-                                    logging.error(f"Error in chatroom management: {e}")
-                                    print("Error occurred in chatroom management.")
-                                    break
-                        # Logout
-                        elif choice == "5" and self.isOnline:
-                            self.logout(1)
-                            self.isOnline = False
-                            self.loginCredentials = (None, None)
-                            self.peerServer.isOnline = False
-                            self.peerServer.tcpServerSocket.close()
-                            if self.peerClient is not None:
-                                self.peerClient.tcpClientSocket.close()
-                            print("Logged out successfully\n")
-                            choice = "q"
-                            log_flag = False
-                            del self  # To reserve memory
-                            new_obj = peerMain()  # to initialize a new peer after logout!
-                    except Exception as e:
-                        logging.error(f"Error in main menu: {e}")
-                        print("An unexpected error occurred in the main menu. Please try again.")
-                        choice = "q"  # Exiting the loop in case of an unexpected error
-
-            except Exception as e:
-                logging.error(f"Error in main loop: {e}")
-                print("An unexpected error occurred. Please try again.")
-                break
-        # if main process is ended with quit selection
-        if choice == "q":
-            print("Exiting the application. Goodbye!")
-            self.cleanup_resources()
-            
-            
-        # if main process is not ended with cancel selection
-        # socket of the client is closed
-        if choice != "CANCEL":
-            self.tcpClientSocket.close()
     
+    def styleAsError(self, error):
+        return Fore.RED + Style.BRIGHT + error + Style.RESET_ALL
+    def styleAsSuccess(self, success):
+        return Fore.GREEN + Style.BRIGHT + success + Style.RESET_ALL
+    def styleAsWarning(self, warning):
+        return Fore.YELLOW + Style.BRIGHT + warning + Style.RESET_ALL
+    def styleAsInfo(self, info):
+        return Fore.BLUE + Style.BRIGHT + info + Style.RESET_ALL
+    def styleAsQuestion(self, question):
+        return Fore.CYAN + Style.BRIGHT + question + Style.RESET_ALL
+    def styleAsInput(self, input):
+        return Fore.MAGENTA + Style.BRIGHT + input + Style.RESET_ALL
+    def getStyledInput(self, title=""):
+        return input(Fore.MAGENTA + title)
+    def styleAsReset(self, reset):
+        return Style.RESET_ALL + reset
+    
+    
+    def main_menu(self, intialChoice = 0, intitalTitle = "Welcome to Club House CLI of Group 19 🥰"):
+        os.system('cls')
+        print(intitalTitle + "\n")
+        choice = intialChoice
+        options = ["Signup", "Login", "Exit the application"]
+        titleForOptions = ["Creating New Account", "Logging In", "Exiting the application"]
+
+        if choice == 0: # Select an option
+            questions = [inquirer.List('auth_choice',message="Please select an option",choices=options,carousel=True)]
+            answers = inquirer.prompt(questions)
+            choice = options.index(answers['auth_choice']) + 1
+            return self.main_menu(choice, self.styleAsInfo(titleForOptions[choice-1])) # redirect to the required page
+        elif choice == 1: # Signup
+            print("Enter your username: ")
+            username = self.getStyledInput()
+            print(Fore.RESET + "Enter your password: ")
+            password = getpass.getpass('')
+            print("Confirm your password: ")
+            confirm_password = getpass.getpass('')
+            if(password != confirm_password):
+                return self.main_menu(1, self.styleAsError("Passwords do not match. Please try again.")) # redirect to main menu
+            password = hashlib.sha256(password.encode()).hexdigest()
+            status = self.create_new_account(username, password)
+            if status == 1:
+                return self.main_menu(2, self.styleAsSuccess("Account created successfully, please login")) # redirect to login
+            else: # username already exist, internal server error
+                return self.main_menu(0, self.styleAsError(status + " Please try again")) # redirect to main menu
+        elif choice == 2: # Login
+            print("Enter your username: ")
+            username = self.getStyledInput()
+            print(Fore.RESET + "Enter your password: ")
+            password = getpass.getpass()
+            password = hashlib.sha256(password.encode()).hexdigest() # Hashing the password using SHA-256
+            # Get New Port: -
+            sock = socket()
+            sock.bind(('', 0))
+            peerServerPort = sock.getsockname()[1]
+            
+            sockUDP = socket(AF_INET, SOCK_DGRAM) 
+            sockUDP.bind(('', 0))
+            peerServerUDPPort = sockUDP.getsockname()[1]
+            
+            status = self.login(username, password, peerServerPort, peerServerUDPPort)
+            # is user logs in successfully, peer variables are set
+            if status == 1:
+                print(Fore.GREEN + Style.BRIGHT + "Logged In Successfully" + Style.RESET_ALL)
+                self.isOnline = True
+                self.loginCredentials = (username, password)
+                self.peerServerPort = peerServerPort
+                self.peerServerUDPPort = peerServerUDPPort
+                
+                # creates the server thread for this peer, and runs it
+                self.peerServer = PeerServer(self.loginCredentials[0], self.peerServerPort, self.peerServerUDPPort)
+                self.peerServer.start()
+                
+                # hello message is sent to registry
+                self.sendHelloMessage()
+                self.store_soket(username,self.peerServer.tcpServerSocket)
+                print()
+                # Show next menu
+                self.select_menu(0, self.styleAsInfo(f"Hello {username}"))
+            else: # wrong password, or already online
+                return self.main_menu(0, status + " Please try again") # redirect to main menu
+            
+    def one_to_one_chat_menu(self):
+        print("Enter OK to accept or REJECT to reject:  ")
+        questions = [
+            inquirer.Confirm("join_chat", message=f"Do you want to accept the chatting request from {self.peerServer.chattingClientName}?", default=True),
+        ]
+        answers = inquirer.prompt(questions)
+        choice = answers["join_chat"]
+        try:
+            if choice:
+                okMessage = "OK " + self.loginCredentials[0]
+                logging.info("Send to " + self.peerServer.connectedPeerIP + " -> " + okMessage)
+                self.peerServer.connectedPeerSocket.send(okMessage.encode())
+                self.peerClient = PeerClient(self.peerServer.connectedPeerIP, self.peerServer.connectedPeerPort , self.loginCredentials[0], self.peerServer, "OK")
+                self.peerClient.start()
+                self.peerClient.join()
+                return self.select_menu(0, self.styleAsInfo(f"Hello {self.loginCredentials[0]}"))
+
+        # if user rejects the chat request then reject message is sent to the requester side
+            else:
+                self.peerServer.connectedPeerSocket.send("REJECT".encode())
+                self.peerServer.isChatRequested = 0
+                logging.info("Send to " + self.peerServer.connectedPeerIP + " -> REJECT")
+                return self.select_menu(0, self.styleAsInfo(f"Hello {self.loginCredentials[0]}"))
+        except Exception as e:
+            logging.error(f"Error in one_to_one_chat_menu: {e}")
+            return self.select_menu(0, self.styleAsError("Error occurred while handling chat request. Please try again."))
+                    
+    def select_menu(self, intialChoice = 0, intitalTitle = "Please select an option: "):
+        os.system('cls')
+        if(globals.ignore_input.is_set()):
+            return self.one_to_one_chat_menu()
+        print(intitalTitle + "\n")
+        choice = intialChoice
+        options = ["View Profile", "Show Online Users", "Chatrooms", "Logout", "Exit the application"]
+        
+        if choice == 0: # Select an option
+            questions = [inquirer.List('main_choice',message="Please select an option",choices=options,carousel=True)]
+            answers = inquirer.prompt(questions)
+            choice = options.index(answers['main_choice']) + 1
+            return self.select_menu(choice, self.styleAsInfo(answers['main_choice'])) # redirect to the required page
+        elif choice == 1: # View Profile
+            try:
+                searchStatus = self.search_for_user(self.loginCredentials[0])
+                if searchStatus:
+                    split_values = searchStatus.split(":")
+                    ip = split_values[0]
+                    user_tcp_port = split_values[1]
+                    user_udp_port = split_values[2]
+                    table = [
+                                ["Username", self.styleAsQuestion(self.loginCredentials[0])],
+                                ["IP", self.styleAsQuestion(ip)],
+                                ["TCP Port", self.styleAsQuestion(user_tcp_port)],
+                                ["UDP Port", self.styleAsQuestion(user_udp_port)]  
+                            ]
+                    print(tabulate(table, tablefmt='fancy_grid'))
+                    input("Press Enter to return to main menu")
+                    return self.select_menu(0)
+                else:
+                    return self.select_menu(0, "Failed to retrieve profile information. Please try again.")
+            except Exception as e:
+                logging.error(f"Error retrieving profile: {e}")
+                return self.select_menu(0, "Error occurred while fetching profile information. Please try again.")
+        elif choice == 2: # Show Online Users
+            try:
+                online_users = self.get_online_users()
+                # check if the user is online, and remove it from the list
+                if self.loginCredentials[0] in online_users:
+                    online_users.remove(self.loginCredentials[0])
+                questions = [inquirer.List('user',message="Please select a user",choices=online_users,carousel=True)]
+                answers = inquirer.prompt(questions)
+                selectedUser = answers['user']
+                searchStatus = self.search_for_user(selectedUser)
+                if searchStatus:
+                    if not isinstance(searchStatus, list):
+                        searchStatus = searchStatus.split(":")
+                    self.peerClient = PeerClient(searchStatus[0], int(searchStatus[1]), self.loginCredentials[0], self.peerServer, None)
+                    self.peerClient.start()
+                    self.peerClient.join()
+                    title = f"{selectedUser} has rejected your request" if self.peerServer.isChatRequested == -1 else f"Chat with {selectedUser} has ended"
+                    return self.select_menu(0, self.styleAsError(title))
+                else:
+                    return self.select_menu(2, self.styleAsError("User not found or error occurred. Please try again."))
+                
+            except Exception as e:
+                logging.error(f"Error fetching online users: {e}")
+                return self.select_menu(0, "Error occurred while fetching online users. Please try again.")   
+        elif choice == 3: # Chatroom management
+            return self.chatroom_menu(0, self.styleAsInfo("Chatroom management"))
+        elif choice == 4: # Logout
+            self.logout(1)
+            self.isOnline = False
+            self.loginCredentials = (None, None)
+            self.peerServer.isOnline = False
+            self.peerServer.tcpServerSocket.close()
+            if self.peerClient is not None:
+                self.peerClient.tcpClientSocket.close()
+            return self.main_menu(0, "Logged out successfully")
+        elif choice == 5: # Exit the application
+            self.cleanup_resources()
+            exit("Exiting the application. Goodbye!")
+    
+    def chatroom_menu(self, intialChoice = 0, intitalTitle = "Chatroom management"):
+        os.system('cls')
+        print(intitalTitle + "\n")
+        choice = intialChoice
+        options = ["Enter a Room", "Create New Room", "Search or Join Chat room", "Leave a Room", "Go back to main menu"]
+        if choice == 0: # Select an option
+            questions = [inquirer.List('room_main_choice',message="Please select an option",choices=options,carousel=True)]
+            answers = inquirer.prompt(questions)
+            choice = options.index(answers['room_main_choice']) + 1
+            return self.chatroom_menu(choice, self.styleAsInfo(answers['room_main_choice'])) # redirect to the required page
+        elif choice == 1: # Enter a Room
+            try:
+                Joined_rooms = self.get_all_rooms(self.loginCredentials[0])
+                if Joined_rooms is not None:
+                    options = Joined_rooms
+                    options.append("Go back to chat room menu")
+                    questions = [inquirer.List('room_choice',message="Select a room to enter",choices=options,carousel=True)]
+                    answers = inquirer.prompt(questions)
+                    room_name = answers['room_choice']                    
+                    
+                    if room_name == "Go back to chat room menu":
+                        return self.chatroom_menu(0)
+                    else:
+                        self.enter_chat_room(room_name, self.loginCredentials[0])    
+                else:
+                    self.chatroom_menu(0, self.styleAsError("You are not in any room"))
+            except Exception as e:
+                logging.error(f"Error in chatroom management: {e}")
+                return self.chatroom_menu(0, self.styleAsError("Error occurred while fetching chat rooms. Please try again."))
+        elif choice == 2: # Create Room
+            try:
+                print("Enter Room Name:")
+                room_name = self.getStyledInput()
+                print("Enter a password for " + self.styleAsInput(room_name) + " room:")
+                password = getpass.getpass("")
+                username = self.loginCredentials[0]
+                status = self.create_new_room(room_name, password, username)
+                if status == 1:
+                    return self.chatroom_menu(0, self.styleAsInput(room_name) + self.styleAsInfo(" room was created successfully"))
+                else : 
+                    return self.chatroom_menu(0, self.styleAsError(status + " Please try again"))
+                
+            except Exception as e:
+                logging.error(f"Error creating room: {e}")
+                return self.chatroom_menu(2, self.styleAsError("Error occurred while creating room. Please try again.")) 
+        elif choice == 3: # Search or Join Chat room
+            try:
+                print("Enter the room name:")
+                room_name = self.getStyledInput()
+                Admin, users = self.search_for_room(room_name)
+                if Admin is not None:
+                    print(Fore.LIGHTYELLOW_EX + f"Admin: {Admin}")
+                    print(Fore.LIGHTBLUE_EX + f"Users: {users}" + Fore.RESET)
+                    print()
+                    questions = [
+                        inquirer.Confirm("join_room", message="Do you want to Join the Chatroom?", default=True),
+                    ]
+                    answers = inquirer.prompt(questions)
+                    
+                    if answers["join_room"]:
+                        print("Enter room Password: ")
+                        room_pass = getpass.getpass("")
+                        username = self.loginCredentials[0]
+                        room_status = self.join_room_chat(room_name, room_pass, username)
+                        if room_status == 1:
+                            return self.chatroom_menu(0, self.styleAsSuccess("Joined " + room_name + " successfully"))
+                        else:
+                            return self.chatroom_menu(0, self.styleAsError(room_status + " Please try again"))
+                    else:
+                        return self.chatroom_menu(0)
+                else:
+                    return self.chatroom_menu(3, self.styleAsError("Room not found. Please try again."))
+            except Exception as e:
+                import traceback
+                logging.error(f"Error in searching or joining chat room: {traceback.format_exc()}")
+                print("Error occurred while handling chat rooms.")
+        elif choice == 4: # Leave a Room
+            try:
+                Joined_rooms = self.get_all_rooms(self.loginCredentials[0])
+                if Joined_rooms is not None:
+                    options = Joined_rooms
+                    options.append("Go back to chat room menu")
+                    questions = [inquirer.List('room_choice',message="Select a room to leave",choices=options,carousel=True)]
+                    answers = inquirer.prompt(questions)
+                    room_name = answers['room_choice']                    
+                    
+                    if room_name == "Go back to chat room menu":
+                        return self.chatroom_menu(0)
+                    else:
+                        status = self.leave_room(room_name, self.loginCredentials[0])
+                        if status == 1:
+                            return self.chatroom_menu(0, self.styleAsSuccess("You left " + room_name + " successfully"))
+                        else:
+                            return self.chatroom_menu(0, self.styleAsError(status + " Please try again"))
+                else:
+                    self.chatroom_menu(0, self.styleAsError("You are not in any room"))
+            except Exception as e:
+                logging.error(f"Error in chatroom management: {e}")
+                return self.chatroom_menu(0, self.styleAsError("Error occurred while fetching chat rooms. Please try again."))
+        elif choice == 5: # Go back to main menu
+            return self.select_menu(0, self.styleAsInfo(f"Hello {self.loginCredentials[0]}"))
+      
     def cleanup_resources(self):
         try:
             if self.isOnline:
@@ -307,7 +361,7 @@ class peerMain:
 
             # Handling response
             if response.get("result") == "success":
-                print(f"You joined {room_name} room successfully...")
+                print(self.styleAsInfo("You joined " + room_name + " room successfully.") + self.styleAsError(" Type 'exit' to leave the room."))
                 globals.room_users = response.get("users", [])
                 globals.joined_room_name = room_name
             else:
@@ -321,18 +375,27 @@ class peerMain:
                     print("Error: User not found in room users.")
                     return
 
-                self.send_message_to_room_users(sender_socket, f"{username} joined the room", me, room_name)
+                self.send_message_to_room_users(sender_socket, self.get_user_color(username) + f"{username}" + Fore.RESET +" joined the room", me, room_name)
                 
                 # Chat loop
                 while True:
                     message = input()
+                    print('\033[1A' + '\033[K', end='')
+                    print("you: " + message)
                     if message.lower() == "exit":
                         globals.room_users = []
                         globals.joined_room_name = ""
                         print("Exiting the room...")
                         break
                     else:
-                        self.send_message_to_room_users(sender_socket, f"{username}: {message}", me, room_name)
+                        self.send_message_to_room_users(
+                            sender_socket, 
+                            self.get_user_color(username) + f"{username}: " + Fore.RESET + f"{message}", 
+                            me, 
+                            room_name
+                        )
+                        
+                return self.chatroom_menu(0)
         except Exception as e:
             logging.error(f"Error in enter_chat_room: {e}")
             print("An error occurred while entering the chat room.")
@@ -354,6 +417,16 @@ class peerMain:
                     print(f"Error sending message to {user['username']}: {e}")
                     continue
 
+    def get_user_color(self, username):
+        # Define a list of colors from Colorama
+        colors = [
+            Fore.RED, Fore.GREEN, Fore.YELLOW, Fore.BLUE, Fore.MAGENTA, Fore.CYAN
+        ]
+
+        # Use the hash of the username to choose a color
+        random.seed(hash(username))
+        color = random.choice(colors)
+        return color
     # room creation function
     def create_new_room(self, room_name, password, Admin):
         try:
@@ -368,14 +441,14 @@ class peerMain:
 
             # Handling different responses
             if response == "join-success":
-                print(f"Chat room '{room_name}' created by {Admin}.")
+                return 1
             elif response == "join-exist":
-                print("Room name exists!")
+                return "Room name exists, please choose another room name."
             else:
-                print("Unexpected response from the server.")
+                return "Unexpected response from the server."
         except Exception as e:
             logging.error(f"Error in create_new_room: {e}")
-            print("An error occurred while creating the chat room.")
+            return "An error occurred while creating the chat room."
 
     def search_for_room(self, room_name):
         try:
@@ -390,7 +463,6 @@ class peerMain:
             
             # Handling different responses
             if response[0] == "search-success":
-                print(f"{room_name} is found successfully...\n")
                 return response[1], response[2:]  # 1: Admin, 2: Users list
             elif response[0] == "search-Room-not-found":
                 print(f"{room_name} is not found")
@@ -416,21 +488,16 @@ class peerMain:
 
             # Handling different responses
             if response == "join-success":
-                print(f"Joined {room_name} successfully...")
                 return 1
             elif response == "Already-in":
-                print("You are already in the chat room!")
-                return 2
+                return "You are already in the chat room!"
             elif response == "Wrong-pass":
-                print("Incorrect password. Try again.")
-                return 3
+                return "Incorrect password. Try again."
             else:
-                print("Unexpected response from the server.")
-                return -1
+                return "Unexpected response from the server."
         except Exception as e:
             logging.error(f"Error in join_room_chat: {e}")
-            print("An error occurred while joining the chat room.")
-            return -1
+            return "An error occurred while joining the chat room."
 
         
     def leave_room(self, room_name, username):
@@ -443,9 +510,8 @@ class peerMain:
             # Receiving and decoding the response
             response = self.tcpClientSocket.recv(1024).decode()
             logging.info(f"Received from {self.registryName} -> {response}")
-
-            # Print the server response
-            print(response)
+            
+            return 1
 
         except Exception as e:
             logging.error(f"Error in leave_room: {e}")
@@ -508,14 +574,14 @@ class peerMain:
 
             # Handling different responses
             if response == "join-success":
-                print("Account created successfully.")
+                return 1
             elif response == "join-exist":
-                print("Username already exists, please choose another username or login.")
+                return "Username already exists, please choose another username or login."
             else:
-                print("Unexpected response from the server.")
+                return "Unexpected response from the server."
         except Exception as e:
             logging.error(f"Error in create_new_account: {e}")
-            print("An error occurred while creating a new account.")
+            return "An error occurred while creating a new account."
 
 
     # login function
@@ -532,24 +598,18 @@ class peerMain:
 
             # Handling different responses
             if response == "login-success":
-                print("Logged in successfully.")
                 return 1
             elif response == "login-account-not-exist":
-                print("Account does not exist.")
-                return 0
+                return "Account does not exist."
             elif response == "login-online":
-                print("Account is already online.")
-                return 2
+                return "Account is already online."
             elif response == "login-wrong-password":
-                print("Wrong password.")
-                return 3
+                return "Wrong password."
             else:
-                print("Unexpected response from the server.")
-                return -1
+                return "Unexpected response from the server."
         except Exception as e:
             logging.error(f"Error in login: {e}")
-            print("An error occurred while trying to log in.")
-            return -1
+            return "An error occurred while trying to log in."
    
     # logout function
     def logout(self, option):
@@ -582,21 +642,19 @@ class peerMain:
 
             # Handling different responses
             if response[0] == "search-success":
-                print(f"{username} is found successfully.")
-                # Assuming the IP address of the user is the second element in the response
                 return response[1]
             elif response[0] == "search-user-not-online":
-                print(f"{username} is not online.")
+                print(self.styleAsError(f"{username} is not online."))
                 return 0
             elif response[0] == "search-user-not-found":
-                print(f"{username} is not found.")
+                print(self.styleAsError(f"{username} is not found."))
                 return None
             else:
-                print("Unexpected response from the server.")
+                print(self.styleAsError("Unexpected response from the server."))
                 return None
         except Exception as e:
             logging.error(f"Error in search_for_user: {e}")
-            print("An error occurred while searching for the user.")
+            print(self.styleAsError("An error occurred while searching for the user."))
             return None
 
         
