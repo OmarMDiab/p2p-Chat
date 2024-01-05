@@ -64,7 +64,7 @@ Launches the user interface for the chat application.
 - **Encrypted Communication**: Messages are encrypted to ensure privacy and security in conversations.
 - **Multi-Threaded Server**: Each peer server uses multi-threading to handle multiple incoming connections efficiently.
 - **Command-Line Interface**: Offers a user-friendly command-line interface for easy navigation and operation of the chat functions.
-
+![App Flow Diagram](https://github.com/OmarMDiab/p2p-Chat/blob/main/App_Flow.png?raw=true)
 
 ## File Descriptions
 
