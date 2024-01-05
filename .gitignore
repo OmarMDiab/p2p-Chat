@@ -3,3 +3,4 @@
 Server/tempCodeRunnerFile.py
 p2pChat/__pycache__
 p2pChat/*.log
+p2pChat/logs

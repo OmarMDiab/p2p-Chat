@@ -15,7 +15,7 @@ cd p2pChat
 - Install `MongoDB Compass` and ensure it is running as the application uses it for data storage.
 - Install required Python packages:
   ```
-  pip install pymongo colorama
+  pip install pymongo colorama inquirer
   ```
 
 **3. Configure the Application**:
@@ -56,6 +56,10 @@ Launches the user interface for the chat application.
 ## Features
 - **User Registration and Authentication**: Secure process for creating new user accounts and logging in. The registry server validates credentials, ensuring secure access.
 - **Real-Time Peer-to-Peer Messaging**: Users can directly communicate with others in real-time, establishing private chat connections.
+- **One-to-One Chat Functionality**: Engage in private conversations.
+- **Optimized TCP/UDP Usage**: Efficient, reliable communication.
+- **Performance Testing**: Validated scalability and responsiveness.
+- **Enhanced User Interface**: Improved navigation and visual presentation.
 - **Dynamic Peer List Retrieval**: The application provides an updated list of online peers, allowing users to choose whom they want to chat with.
 - **Encrypted Communication**: Messages are encrypted to ensure privacy and security in conversations.
 - **Multi-Threaded Server**: Each peer server uses multi-threading to handle multiple incoming connections efficiently.
@@ -78,6 +82,9 @@ Each file in the P2P Chatting Application serves a distinct purpose:
 
 - `run_peers.py`: A utility script used in development to simulate multiple peer instances, aiding in comprehensive testing of the application's functionalities.
 
+- `globals.py`: Manages global variables that needs to be accessible within multiple files.
+
+- `performance_testing`: A script for performance testing, it simulates `X` number of running threads and creates new accounts for them then join a room named `performance_testing` then it prints the average time taken for this `X` value.
 
 
 

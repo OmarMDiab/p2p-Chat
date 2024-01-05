@@ -6,7 +6,6 @@ import pickle
 import globals
 import logging
 from socket import gaierror, timeout
-from pick import pick
 import inquirer
 import os
 from tabulate import tabulate
@@ -267,7 +266,7 @@ class peerMain:
             try:
                 print("Enter Room Name:")
                 room_name = self.getStyledInput()
-                print("Enter a password for " + self.styleAsInput(room_name) + " room:")
+                print(Fore.RESET + "Enter a password for " + self.styleAsInput(room_name) + " room:")
                 password = getpass.getpass("")
                 username = self.loginCredentials[0]
                 status = self.create_new_room(room_name, password, username)
