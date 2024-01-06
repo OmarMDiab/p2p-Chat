@@ -10,8 +10,8 @@ import select
 import logging
 import db
 import pickle
-from config import *
 import json
+
 # This class is used to process the peer messages sent to registry
 # for each peer connected to registry, a new client thread is created
 class ClientThread(threading.Thread):
@@ -62,6 +62,16 @@ class ClientThread(threading.Thread):
                         logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
                         self.tcpClientSocket.send(response.encode())
 
+                #    Delete Room  #
+                if message[0]== "DELETE":
+                    if db.Delete_room(message[1],message[2]):
+                        response = "room-deleted"
+                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
+                        self.tcpClientSocket.send(response.encode())
+                    else:
+                        response="not-admin"
+                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
+                        self.tcpClientSocket.send(response.encode())
 
                 #   CREATE ACC    #
                 elif message[0] == "CREATE_NEW_ACCOUNT":
@@ -77,6 +87,17 @@ class ClientThread(threading.Thread):
                     else:
                         db.register(message[1], message[2])
                         response = "join-success"
+                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                        self.tcpClientSocket.send(response.encode())
+
+                # Delete Account #
+                elif message[0]== "delAcc":
+                    if db.Delete_user(message[1]):
+                        response="User-Deleted"
+                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                        self.tcpClientSocket.send(response.encode())
+                    else:
+                        response="err"
                         logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
                         self.tcpClientSocket.send(response.encode())
 
@@ -257,7 +278,7 @@ class ClientThread(threading.Thread):
 
             #      Leave Room   #
                 elif message[0] == "Leave":
-                    _,response=db.remove_user_from_room(message[1],message[2])
+                    response=db.remove_user_from_room(message[1],message[2])
                     logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
                     self.tcpClientSocket.send(response.encode())
                     
@@ -310,7 +331,7 @@ port = 15600
 portUDP = 15500
 
 # db initialization
-#############################db = db.DB()
+db = db.DB()
 
 # gets the ip address of this peer
 # first checks to get it for windows devices

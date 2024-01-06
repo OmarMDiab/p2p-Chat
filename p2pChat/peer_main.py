@@ -80,6 +80,7 @@ class peerMain:
             answers = inquirer.prompt(questions)
             choice = options.index(answers['auth_choice']) + 1
             return self.main_menu(choice, self.styleAsInfo(titleForOptions[choice-1])) # redirect to the required page
+        
         elif choice == 1: # Signup
             print("Enter your username: ")
             username = self.getStyledInput()
@@ -95,6 +96,7 @@ class peerMain:
                 return self.main_menu(2, self.styleAsSuccess("Account created successfully, please login")) # redirect to login
             else: # username already exist, internal server error
                 return self.main_menu(0, self.styleAsError(status + " Please try again")) # redirect to main menu
+            
         elif choice == 2: # Login
             print("Enter your username: ")
             username = self.getStyledInput()
@@ -132,46 +134,22 @@ class peerMain:
             else: # wrong password, or already online
                 return self.main_menu(0, status + " Please try again") # redirect to main menu
             
-    def one_to_one_chat_menu(self):
-        print("Enter OK to accept or REJECT to reject:  ")
-        questions = [
-            inquirer.Confirm("join_chat", message=f"Do you want to accept the chatting request from {self.peerServer.chattingClientName}?", default=True),
-        ]
-        answers = inquirer.prompt(questions)
-        choice = answers["join_chat"]
-        try:
-            if choice:
-                okMessage = "OK " + self.loginCredentials[0]
-                logging.info("Send to " + self.peerServer.connectedPeerIP + " -> " + okMessage)
-                self.peerServer.connectedPeerSocket.send(okMessage.encode())
-                self.peerClient = PeerClient(self.peerServer.connectedPeerIP, self.peerServer.connectedPeerPort , self.loginCredentials[0], self.peerServer, "OK")
-                self.peerClient.start()
-                self.peerClient.join()
-                return self.select_menu(0, self.styleAsInfo(f"Hello {self.loginCredentials[0]}"))
 
-        # if user rejects the chat request then reject message is sent to the requester side
-            else:
-                self.peerServer.connectedPeerSocket.send("REJECT".encode())
-                self.peerServer.isChatRequested = 0
-                logging.info("Send to " + self.peerServer.connectedPeerIP + " -> REJECT")
-                return self.select_menu(0, self.styleAsInfo(f"Hello {self.loginCredentials[0]}"))
-        except Exception as e:
-            logging.error(f"Error in one_to_one_chat_menu: {e}")
-            return self.select_menu(0, self.styleAsError("Error occurred while handling chat request. Please try again."))
-                    
     def select_menu(self, intialChoice = 0, intitalTitle = "Please select an option: "):
         os.system('cls')
         if(globals.ignore_input.is_set()):
             return self.one_to_one_chat_menu()
         print(intitalTitle + "\n")
         choice = intialChoice
-        options = ["View Profile", "Show Online Users", "Chatrooms", "Logout", "Exit the application"]
-        
+        options = ["View Profile", "Show Online Users", "Chatrooms", "Logout",Fore.RED + "Delete Account", "Exit the application"]
+
         if choice == 0: # Select an option
             questions = [inquirer.List('main_choice',message="Please select an option",choices=options,carousel=True)]
             answers = inquirer.prompt(questions)
             choice = options.index(answers['main_choice']) + 1
             return self.select_menu(choice, self.styleAsInfo(answers['main_choice'])) # redirect to the required page
+        
+
         elif choice == 1: # View Profile
             try:
                 searchStatus = self.search_for_user(self.loginCredentials[0])
@@ -194,32 +172,41 @@ class peerMain:
             except Exception as e:
                 logging.error(f"Error retrieving profile: {e}")
                 return self.select_menu(0, "Error occurred while fetching profile information. Please try again.")
+            
         elif choice == 2: # Show Online Users
             try:
                 online_users = self.get_online_users()
                 # check if the user is online, and remove it from the list
                 if self.loginCredentials[0] in online_users:
                     online_users.remove(self.loginCredentials[0])
-                questions = [inquirer.List('user',message="Please select a user",choices=online_users,carousel=True)]
-                answers = inquirer.prompt(questions)
-                selectedUser = answers['user']
-                searchStatus = self.search_for_user(selectedUser)
-                if searchStatus:
-                    if not isinstance(searchStatus, list):
-                        searchStatus = searchStatus.split(":")
-                    self.peerClient = PeerClient(searchStatus[0], int(searchStatus[1]), self.loginCredentials[0], self.peerServer, None)
-                    self.peerClient.start()
-                    self.peerClient.join()
-                    title = f"{selectedUser} has rejected your request" if self.peerServer.isChatRequested == -1 else f"Chat with {selectedUser} has ended"
-                    return self.select_menu(0, self.styleAsError(title))
+                if online_users:
+                    online_users.append("Go back to Main Menu")
+                    questions = [inquirer.List('user',message="Please select a user",choices=online_users,carousel=True)]
+                    answers = inquirer.prompt(questions)
+                    selectedUser = answers['user']
+                    if selectedUser == "Go back to Main Menu":
+                        return self.select_menu(0)
+                    searchStatus = self.search_for_user(selectedUser)
+                    if searchStatus:
+                        if not isinstance(searchStatus, list):
+                            searchStatus = searchStatus.split(":")
+                        self.peerClient = PeerClient(searchStatus[0], int(searchStatus[1]), self.loginCredentials[0], self.peerServer, None)
+                        self.peerClient.start()
+                        self.peerClient.join()
+                        title = f"{selectedUser} has rejected your request" if self.peerServer.isChatRequested == -1 else f"Chat with {selectedUser} has ended"
+                        return self.select_menu(0, self.styleAsError(title))
+                    else:
+                        return self.select_menu(2, self.styleAsError("User not found or error occurred. Please try again."))
                 else:
-                    return self.select_menu(2, self.styleAsError("User not found or error occurred. Please try again."))
+                    return self.select_menu(0, self.styleAsError("There are no Online Users"))
                 
             except Exception as e:
                 logging.error(f"Error fetching online users: {e}")
                 return self.select_menu(0, "Error occurred while fetching online users. Please try again.")   
+            
         elif choice == 3: # Chatroom management
             return self.chatroom_menu(0, self.styleAsInfo("Chatroom management"))
+        
         elif choice == 4: # Logout
             self.logout(1)
             self.isOnline = False
@@ -228,40 +215,53 @@ class peerMain:
             self.peerServer.tcpServerSocket.close()
             if self.peerClient is not None:
                 self.peerClient.tcpClientSocket.close()
-            return self.main_menu(0, "Logged out successfully")
-        elif choice == 5: # Exit the application
+            
+            return self.CreateNewPeer()
+        
+        elif choice==5:
+            if self.Delete_Account(self.loginCredentials[0]):
+                return self.select_menu(4, self.styleAsSuccess("Your Account is Deleted Successfully!"))
+            else:
+                return self.select_menu(0, self.styleAsError("error in deleting your Account"))
+            
+        elif choice == 6: # Exit the application
             self.cleanup_resources()
             exit("Exiting the application. Goodbye!")
+
     
-    def chatroom_menu(self, intialChoice = 0, intitalTitle = "Chatroom management"):
+    def chatroom_menu(self, intialChoice = 0, intitalTitle = "Chatrooms Management"):
         os.system('cls')
         print(intitalTitle + "\n")
         choice = intialChoice
-        options = ["Enter a Room", "Create New Room", "Search or Join Chat room", "Leave a Room", "Go back to main menu"]
+
+        options = ["My Rooms", "Create New Room", "Search/Join Chat room", "Go back to main menu"]
+
         if choice == 0: # Select an option
             questions = [inquirer.List('room_main_choice',message="Please select an option",choices=options,carousel=True)]
             answers = inquirer.prompt(questions)
             choice = options.index(answers['room_main_choice']) + 1
             return self.chatroom_menu(choice, self.styleAsInfo(answers['room_main_choice'])) # redirect to the required page
-        elif choice == 1: # Enter a Room
+        
+        elif choice == 1: # My Rooms
             try:
                 Joined_rooms = self.get_all_rooms(self.loginCredentials[0])
                 if Joined_rooms is not None:
                     options = Joined_rooms
                     options.append("Go back to chat room menu")
-                    questions = [inquirer.List('room_choice',message="Select a room to enter",choices=options,carousel=True)]
+                    questions = [inquirer.List('room_choice',message="Select a room",choices=options,carousel=True)]
                     answers = inquirer.prompt(questions)
                     room_name = answers['room_choice']                    
                     
                     if room_name == "Go back to chat room menu":
                         return self.chatroom_menu(0)
                     else:
-                        self.enter_chat_room(room_name, self.loginCredentials[0])    
+                        self.Room_menu(room_name,0)    
                 else:
                     self.chatroom_menu(0, self.styleAsError("You are not in any room"))
             except Exception as e:
                 logging.error(f"Error in chatroom management: {e}")
                 return self.chatroom_menu(0, self.styleAsError("Error occurred while fetching chat rooms. Please try again."))
+            
         elif choice == 2: # Create Room
             try:
                 print("Enter Room Name:")
@@ -278,10 +278,12 @@ class peerMain:
             except Exception as e:
                 logging.error(f"Error creating room: {e}")
                 return self.chatroom_menu(2, self.styleAsError("Error occurred while creating room. Please try again.")) 
+            
+
         elif choice == 3: # Search or Join Chat room
             try:
                 print("Enter the room name:")
-                room_name = self.getStyledInput()
+                room_name = self.getStyledInput()  
                 Admin, users = self.search_for_room(room_name)
                 if Admin is not None:
                     print(Fore.LIGHTYELLOW_EX + f"Admin: {Admin}")
@@ -309,31 +311,87 @@ class peerMain:
                 import traceback
                 logging.error(f"Error in searching or joining chat room: {traceback.format_exc()}")
                 print("Error occurred while handling chat rooms.")
-        elif choice == 4: # Leave a Room
-            try:
-                Joined_rooms = self.get_all_rooms(self.loginCredentials[0])
-                if Joined_rooms is not None:
-                    options = Joined_rooms
-                    options.append("Go back to chat room menu")
-                    questions = [inquirer.List('room_choice',message="Select a room to leave",choices=options,carousel=True)]
-                    answers = inquirer.prompt(questions)
-                    room_name = answers['room_choice']                    
-                    
-                    if room_name == "Go back to chat room menu":
-                        return self.chatroom_menu(0)
-                    else:
-                        status = self.leave_room(room_name, self.loginCredentials[0])
-                        if status == 1:
-                            return self.chatroom_menu(0, self.styleAsSuccess("You left " + room_name + " successfully"))
-                        else:
-                            return self.chatroom_menu(0, self.styleAsError(status + " Please try again"))
-                else:
-                    self.chatroom_menu(0, self.styleAsError("You are not in any room"))
-            except Exception as e:
-                logging.error(f"Error in chatroom management: {e}")
-                return self.chatroom_menu(0, self.styleAsError("Error occurred while fetching chat rooms. Please try again."))
-        elif choice == 5: # Go back to main menu
+
+        elif choice == 4: # Go back to main menu
             return self.select_menu(0, self.styleAsInfo(f"Hello {self.loginCredentials[0]}"))
+        
+    def Room_menu(self, room_name, intialChoice = 0,intitalTitle=""):
+        os.system('cls')
+        print(room_name + "\n")
+        choice = intialChoice
+
+        options = [f"Enter {room_name}", f"Leave {room_name}", Fore.RED +f"Delete {room_name} (You must be the Admin)","Go back to Chatrooms Management"]
+
+        if choice == 0: # Select an option
+            questions = [inquirer.List('room_main_choice',message="Please select an option",choices=options,carousel=True)]
+            answers = inquirer.prompt(questions)
+            choice = options.index(answers['room_main_choice']) + 1
+            return self.Room_menu(room_name,choice, self.styleAsInfo(answers['room_main_choice'])) # redirect to the required page
+
+        if choice == 1:
+                self.enter_chat_room(room_name, self.loginCredentials[0])
+
+            
+        elif choice == 2:
+            try:
+                status = self.leave_room(room_name, self.loginCredentials[0])
+                if status == 1:
+                    return self.chatroom_menu(0, self.styleAsSuccess("You left " + room_name + " successfully"))
+                elif status == 2:
+                    return self.chatroom_menu(0, self.styleAsError(f"{room_name} is deleted because all users leaved"))
+                if status == 3:
+                    return self.chatroom_menu(0, self.styleAsSuccess(f"You Left {room_name} and it has a new Admin!"))
+                else:
+                    return self.chatroom_menu(0, self.styleAsError(status + " Please try again later"))
+            except Exception as e:
+                logging.error(f"Error in Leaving {room_name}: {e}")
+                return self.chatroom_menu(0, self.styleAsError(f"Error occurred while fetching {room_name} :(. Please try again."))
+        
+        elif choice == 3:
+            try:
+                status=self.Delete_room(room_name,self.loginCredentials[0])
+                if status == 1:
+                    return self.chatroom_menu(0, self.styleAsSuccess("You Deleted " + room_name + " successfully"))
+                else:
+                    print(status)
+                    return self.chatroom_menu(0, self.styleAsError(status + " Please try again later"))
+            except Exception as e:
+                logging.error(f"Error in deleting {room_name}: {e}")
+                return self.chatroom_menu(0, self.styleAsError(f"Error occurred while fetching {room_name} :(. Please try again later."))
+            
+        elif choice == 4:
+            return self.chatroom_menu(0, self.styleAsInfo("Chatroom management"))
+
+            
+
+
+
+    def one_to_one_chat_menu(self):
+        print("Enter OK to accept or REJECT to reject:  ")
+        questions = [
+            inquirer.Confirm("join_chat", message=f"Do you want to accept the chatting request from {self.peerServer.chattingClientName}?", default=True),
+        ]
+        answers = inquirer.prompt(questions)
+        choice = answers["join_chat"]
+        try:
+            if choice:
+                okMessage = "OK " + self.loginCredentials[0]
+                logging.info("Send to " + self.peerServer.connectedPeerIP + " -> " + okMessage)
+                self.peerServer.connectedPeerSocket.send(okMessage.encode())
+                self.peerClient = PeerClient(self.peerServer.connectedPeerIP, self.peerServer.connectedPeerPort , self.loginCredentials[0], self.peerServer, "OK")
+                self.peerClient.start()
+                self.peerClient.join()
+                return self.select_menu(0, self.styleAsInfo(f"Hello {self.loginCredentials[0]}"))
+
+        # if user rejects the chat request then reject message is sent to the requester side
+            else:
+                self.peerServer.connectedPeerSocket.send("REJECT".encode())
+                self.peerServer.isChatRequested = 0
+                logging.info("Send to " + self.peerServer.connectedPeerIP + " -> REJECT")
+                return self.select_menu(0, self.styleAsInfo(f"Hello {self.loginCredentials[0]}"))
+        except Exception as e:
+            logging.error(f"Error in one_to_one_chat_menu: {e}")
+            return self.select_menu(0, self.styleAsError("Error occurred while handling chat request. Please try again."))
       
     def cleanup_resources(self):
         try:
@@ -426,6 +484,10 @@ class peerMain:
         random.seed(hash(username))
         color = random.choice(colors)
         return color
+
+
+# >> server/db Functions     
+    
     # room creation function
     def create_new_room(self, room_name, password, Admin):
         try:
@@ -448,6 +510,27 @@ class peerMain:
         except Exception as e:
             logging.error(f"Error in create_new_room: {e}")
             return "An error occurred while creating the chat room."
+        
+    def Delete_room(self,room_name, username):
+        try:
+            message="DELETE " + room_name +" "+ username
+            logging.info(f"Send to {self.registryName}:{self.registryPort} -> {message}")
+            self.tcpClientSocket.send(message.encode())
+
+            # Receiving and decoding the response
+            response = self.tcpClientSocket.recv(1024).decode()
+            logging.info(f"Received from {self.registryName} -> {response}")
+
+            # Handling different responses
+            if response == "room-deleted":
+                return 1
+            elif response == "not-admin":
+                return "You are not the Admin of the room"
+            else:
+                return "Unexpected response from the server."
+        except Exception as e:
+            logging.error(f"Error in Deleting-room: {e}")
+            return "An error occurred while deleting the chat room."
 
     def search_for_room(self, room_name):
         try:
@@ -465,14 +548,14 @@ class peerMain:
                 return response[1], response[2:]  # 1: Admin, 2: Users list
             elif response[0] == "search-Room-not-found":
                 print(f"{room_name} is not found")
-                return None
+                return None,None
             else:
                 print("Unexpected response from the server.")
                 return None
         except Exception as e:
             logging.error(f"Error in search_for_room: {e}")
             print("An error occurred while searching for the room.")
-            return None
+            return None,None
         
     def join_room_chat(self, room_name, room_pass, username):
         try:
@@ -509,8 +592,12 @@ class peerMain:
             # Receiving and decoding the response
             response = self.tcpClientSocket.recv(1024).decode()
             logging.info(f"Received from {self.registryName} -> {response}")
-            
-            return 1
+            if response=="user-leaved":
+                return 1
+            elif response=="room-deleted":
+                return 2
+            elif response=="new-admin":
+                return 3
 
         except Exception as e:
             logging.error(f"Error in leave_room: {e}")
@@ -581,6 +668,19 @@ class peerMain:
         except Exception as e:
             logging.error(f"Error in create_new_account: {e}")
             return "An error occurred while creating a new account."
+
+    def Delete_Account(self,username):
+        message = "delAcc " + " " + username
+        logging.info(f"Send to {self.registryName}:{self.registryPort} -> {message}")
+        self.tcpClientSocket.send(message.encode())
+
+        # Receiving and decoding the response
+        response = self.tcpClientSocket.recv(1024).decode()
+        logging.info(f"Received from {self.registryName} -> {response}")
+        if response == "User-Deleted":
+            return 1
+        else:
+            return 0
 
 
     # login function
@@ -686,6 +786,11 @@ class peerMain:
         self.udpClientSocket.sendto(message.encode(), (self.registryName, self.registryUDPPort))
         self.timer = threading.Timer(1, self.sendHelloMessage) # status control
         self.timer.start()
+    
+    def CreateNewPeer(self):
+        del self
+        p = peerMain()
+
 
 # peer is started
 main = peerMain()

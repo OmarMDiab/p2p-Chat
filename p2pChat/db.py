@@ -7,7 +7,8 @@ class DB:
 
     def is_account_exist(self, username):
         return self.db.accounts.count_documents({'username': username}) > 0
-
+    
+# >>> Register user
     def register(self, username, password):
         account = {
             "username": username,
@@ -15,6 +16,24 @@ class DB:
             "password": password
         }
         self.db.accounts.insert_one(account)
+
+# >>> Delete user 
+    def Delete_user(self, username):
+        # Check if the user exists
+        user = self.db.accounts.find_one({"username": username})
+        
+        # Remove the user from all ChatRooms
+        chatrooms_list = user.get("ChatRooms", [])
+        if chatrooms_list:
+            for Chatroom in chatrooms_list:
+                self.remove_user_from_room(Chatroom,username)
+
+        # Delete the user from the accounts collection
+        self.db.accounts.delete_one({"username": username})
+
+        print(f"User '{username}' has been successfully deleted.")
+        return 1
+
 
     def get_password(self, username):
         user_data = self.db.accounts.find_one({"username": username})
@@ -69,6 +88,36 @@ class DB:
                 {"$push": {"ChatRooms": room_name}}
         )
         self.db.Chatrooms.insert_one(Chat_room)
+
+    def Delete_room(self, room_name, Admin="leaved"):
+        # >>  Check if the Admin exists and has the authority to delete the room
+        admin_check = self.db.chatrooms.find_one({"Admin": Admin, "ChatRooms": room_name})
+
+        if Admin=="leaved":  # Empty Chatroom
+            self.db.Chatrooms.delete_one({"room_name": room_name}) 
+
+        elif admin_check:
+            # Remove the room from the admin's ChatRooms list
+            self.db.accounts.update_one(
+                {"username": Admin},
+                {"$pull": {"ChatRooms": room_name}}
+            )
+
+            # Delete the room from the Chatrooms collection
+            self.db.Chatrooms.delete_one({"room_name": room_name})
+            
+            # Remove all references to the room in other users' ChatRooms lists
+            self.db.accounts.update_many(
+                {"ChatRooms": room_name},
+                {"$pull": {"ChatRooms": room_name}}
+            )
+
+            print(f"Room '{room_name}' has been successfully deleted.")
+            return 1
+        else:
+            print(f"user '{Admin}' does not have the authority to delete room '{room_name}'")
+            return 0
+
 
     def does_room_exist(self, room_name):
         return self.db.Chatrooms.count_documents({'room_name': room_name}) > 0
@@ -127,26 +176,43 @@ class DB:
     
     def is_user_in_chat_room(self, username, room_name):
         return self.db.Chatrooms.count_documents({'room_name': room_name, 'users': username}) > 0
-
-
+    
     def remove_user_from_room(self, room_name, user_to_remove):
-        # Find the chat room with the specified name
+        newAdminFlag=0
         chat_room = self.db.Chatrooms.find_one({"room_name": room_name})
-        # Remove the user from the room's user list
         chat_room["users"].remove(user_to_remove)
+        # Update the user's account to remove the room from ChatRooms
+        self.db.accounts.update_one(
+            {"username": user_to_remove},
+            {"$pull": {"ChatRooms": room_name}}
+        )
+
+        if user_to_remove == chat_room["Admin"]:
+            # Get the first user in the room to be promoted as the new admin
+            if len(chat_room["users"]) > 0:
+                new_admin = chat_room["users"][0]  
+                # Promote the first user to be the new admin
+                self.db.Chatrooms.update_one(
+                    {"room_name": room_name},
+                    {"$set": {"Admin": new_admin}}
+                )
+                newAdminFlag=1
+            else: 
+                self.Delete_room(room_name) # the room is empty!
+                return "room-deleted"    
+
+        
+
         # Update the database with the modified chat room
         self.db.Chatrooms.update_one(
             {"room_name": room_name},
             {"$set": {"users": chat_room["users"]}}
         )
 
-        # Update the user's account to remove the room from ChatRooms
-        self.db.accounts.update_one(
-            {"username": user_to_remove},
-            {"$pull": {"ChatRooms": room_name}}
-        )
-        
-        return True, f"User '{user_to_remove}' removed from the room '{room_name}'."
+        if newAdminFlag:
+            return "new-admin"
+        else:
+            return "user-leaved"
 
 
 
