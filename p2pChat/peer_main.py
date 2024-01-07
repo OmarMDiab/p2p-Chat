@@ -489,6 +489,7 @@ class peerMain:
         if '\033]8;;' in message:
             url = re.search(r'\033]8;;(.*?)\033\\', message).group(1)
             webbrowser.open(url)
+            message = message + '( '+ url + ' )'
 
         data = { 
             "message": message,
