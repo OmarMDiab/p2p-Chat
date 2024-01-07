@@ -14,9 +14,9 @@ import random
 # main process of the peer
 class peerMain:
     # peer initializations
-    def __init__(self):
+    def __init__(self, message = 'Welcome to Club House CLI of Group 19 🥰'):
         self.setup_network()
-        self.main_menu()
+        self.main_menu(0, message)
                     
     def setup_network(self):
         try:
@@ -218,9 +218,18 @@ class peerMain:
             
             return self.CreateNewPeer()
         
-        elif choice==5:
+        elif choice == 5: # Delete Account
             if self.Delete_Account(self.loginCredentials[0]):
-                return self.select_menu(4, self.styleAsSuccess("Your Account is Deleted Successfully!"))
+                self.logout(1)
+                self.isOnline = False
+                self.loginCredentials = (None, None)
+                self.peerServer.isOnline = False
+                self.peerServer.tcpServerSocket.close()
+                if self.peerClient is not None:
+                    self.peerClient.tcpClientSocket.close()
+                
+                return self.CreateNewPeer(self.styleAsSuccess("Your Account is Deleted Successfully!"))
+
             else:
                 return self.select_menu(0, self.styleAsError("error in deleting your Account"))
             
@@ -306,7 +315,7 @@ class peerMain:
                     else:
                         return self.chatroom_menu(0)
                 else:
-                    return self.chatroom_menu(3, self.styleAsError("Room not found. Please try again."))
+                    return self.chatroom_menu(0, self.styleAsError("Room not found. Please try again."))
             except Exception as e:
                 import traceback
                 logging.error(f"Error in searching or joining chat room: {traceback.format_exc()}")
@@ -787,9 +796,9 @@ class peerMain:
         self.timer = threading.Timer(1, self.sendHelloMessage) # status control
         self.timer.start()
     
-    def CreateNewPeer(self):
+    def CreateNewPeer(self, message):
         del self
-        p = peerMain()
+        p = peerMain(message=message)
 
 
 # peer is started
