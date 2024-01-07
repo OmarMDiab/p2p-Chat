@@ -264,7 +264,7 @@ class peerMain:
                     if room_name == "Go back to chat room menu":
                         return self.chatroom_menu(0)
                     else:
-                        self.Room_menu(room_name,0)    
+                        self.Room_menu(room_name,0,"")    
                 else:
                     self.chatroom_menu(0, self.styleAsError("You are not in any room"))
             except Exception as e:
@@ -326,7 +326,8 @@ class peerMain:
         
     def Room_menu(self, room_name, intialChoice = 0,intitalTitle=""):
         os.system('cls')
-        print(room_name + "\n")
+        intitalTitle = f"Room: {room_name}" if intitalTitle == "" else intitalTitle
+        print(intitalTitle + "\n")
         choice = intialChoice
 
         options = [f"Enter {room_name}", f"Leave {room_name}", Fore.RED +f"Delete {room_name} (You must be the Admin)","Go back to Chatrooms Management"]
@@ -335,13 +336,13 @@ class peerMain:
             questions = [inquirer.List('room_main_choice',message="Please select an option",choices=options,carousel=True)]
             answers = inquirer.prompt(questions)
             choice = options.index(answers['room_main_choice']) + 1
-            return self.Room_menu(room_name,choice, self.styleAsInfo(answers['room_main_choice'])) # redirect to the required page
+            return self.Room_menu(room_name,choice, "") # redirect to the required page
 
-        if choice == 1:
+        if choice == 1: # Enter Room
                 self.enter_chat_room(room_name, self.loginCredentials[0])
 
             
-        elif choice == 2:
+        elif choice == 2: # Leave Room
             try:
                 status = self.leave_room(room_name, self.loginCredentials[0])
                 if status == 1:
@@ -356,19 +357,18 @@ class peerMain:
                 logging.error(f"Error in Leaving {room_name}: {e}")
                 return self.chatroom_menu(0, self.styleAsError(f"Error occurred while fetching {room_name} :(. Please try again."))
         
-        elif choice == 3:
+        elif choice == 3: # Delete Room
             try:
                 status=self.Delete_room(room_name,self.loginCredentials[0])
                 if status == 1:
                     return self.chatroom_menu(0, self.styleAsSuccess("You Deleted " + room_name + " successfully"))
                 else:
-                    print(status)
                     return self.chatroom_menu(0, self.styleAsError(status + " Please try again later"))
             except Exception as e:
                 logging.error(f"Error in deleting {room_name}: {e}")
                 return self.chatroom_menu(0, self.styleAsError(f"Error occurred while fetching {room_name} :(. Please try again later."))
             
-        elif choice == 4:
+        elif choice == 4: # Go back to Chatrooms Management
             return self.chatroom_menu(0, self.styleAsInfo("Chatroom management"))
 
             
