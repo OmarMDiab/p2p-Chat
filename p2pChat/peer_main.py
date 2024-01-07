@@ -10,6 +10,8 @@ import inquirer
 import os
 from tabulate import tabulate
 import random
+import re
+import webbrowser
 
 # main process of the peer
 class peerMain:
@@ -384,6 +386,7 @@ class peerMain:
         choice = answers["join_chat"]
         try:
             if choice:
+                print("-- type 'quit' to exit the chat --")
                 okMessage = "OK " + self.loginCredentials[0]
                 logging.info("Send to " + self.peerServer.connectedPeerIP + " -> " + okMessage)
                 self.peerServer.connectedPeerSocket.send(okMessage.encode())
@@ -454,9 +457,10 @@ class peerMain:
                         print("Exiting the room...")
                         break
                     else:
+                        formatted_message = self.formatting_message(message)
                         self.send_message_to_room_users(
                             sender_socket, 
-                            self.get_user_color(username) + f"{username}: " + Fore.RESET + f"{message}", 
+                            self.get_user_color(username) + f"{username}: " + Fore.RESET + f"{formatted_message}", 
                             me, 
                             room_name
                         )
@@ -465,8 +469,27 @@ class peerMain:
         except Exception as e:
             logging.error(f"Error in enter_chat_room: {e}")
             print("An error occurred while entering the chat room.")
-                
+
+    def formatting_message(self, raw_message):
+        formatted_message = raw_message
+
+        # **bold**
+        formatted_message = re.sub(r'\*\*(.*?)\*\*', lambda match: f'\033[1m{match.group(1)}\033[0m', formatted_message)
+
+        # __italic__
+        formatted_message = re.sub(r'__(.*?)__', lambda match: f'\033[3m{match.group(1)}\033[0m', formatted_message)
+
+        # [hyperlink](url)
+        formatted_message = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'\033]8;;\2\033\\ \1 \033]8;;\033\\', formatted_message)
+        
+        return formatted_message
+
     def send_message_to_room_users(self, sender_socket, message, me, room_name):
+
+        if '\033]8;;' in message:
+            url = re.search(r'\033]8;;(.*?)\033\\', message).group(1)
+            webbrowser.open(url)
+
         data = { 
             "message": message,
             "user": me,
