@@ -135,8 +135,6 @@ class peerMain:
                 self.select_menu(0, self.styleAsInfo(f"Hello {username}"))
             else: # wrong password, or already online
                 return self.main_menu(0, status + " Please try again") # redirect to main menu
-        elif choice==3:
-            exit("Exiting the application. Goodbye!")
             
 
         
