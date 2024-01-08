@@ -44,243 +44,243 @@ class ClientThread(threading.Thread):
                 message = self.tcpClientSocket.recv(1024).decode().split()
                 logging.info("Received from " + self.ip + ":" + str(self.port) + " -> " + " ".join(message))  
                 
+                if message:
+                    #   Create Room    #
+                    if message[0] == "CREATE":
+                        # join-exist is sent to peer,
+                        # if an account with this username already exists
+                        if db.does_room_exist(message[1]):
+                            response = "join-exist"
+                            print("From-> " + self.ip + ":" + str(self.port) + " " + response)
+                            logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)  
+                            self.tcpClientSocket.send(response.encode())
+                        # join-success is sent to peer,
+                        # if an account with this username is not exist, and the account is created
+                        else:
+                            db.Register_room(message[1], message[2],message[3])
+                            response = "join-success"
+                            logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                            self.tcpClientSocket.send(response.encode())
 
-                #   Create Room    #
-                if message[0] == "CREATE":
-                    # join-exist is sent to peer,
-                    # if an account with this username already exists
-                    if db.does_room_exist(message[1]):
-                        response = "join-exist"
-                        print("From-> " + self.ip + ":" + str(self.port) + " " + response)
-                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)  
-                        self.tcpClientSocket.send(response.encode())
-                    # join-success is sent to peer,
-                    # if an account with this username is not exist, and the account is created
-                    else:
-                        db.Register_room(message[1], message[2],message[3])
-                        response = "join-success"
-                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
-                        self.tcpClientSocket.send(response.encode())
+                    #    Delete Room  #
+                    if message[0]== "DELETE":
+                        if db.Delete_room(message[1],message[2]):
+                            response = "room-deleted"
+                            logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
+                            self.tcpClientSocket.send(response.encode())
+                        else:
+                            response="not-admin"
+                            logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
+                            self.tcpClientSocket.send(response.encode())
 
-                #    Delete Room  #
-                if message[0]== "DELETE":
-                    if db.Delete_room(message[1],message[2]):
-                        response = "room-deleted"
-                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
-                        self.tcpClientSocket.send(response.encode())
-                    else:
-                        response="not-admin"
-                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
-                        self.tcpClientSocket.send(response.encode())
+                    #   CREATE ACC    #
+                    elif message[0] == "CREATE_NEW_ACCOUNT":
+                        # join-exist is sent to peer,
+                        # if an account with this username already exists
+                        if db.is_account_exist(message[1]):
+                            response = "join-exist"
+                            print("From-> " + self.ip + ":" + str(self.port) + " " + response)
+                            logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)  
+                            self.tcpClientSocket.send(response.encode())
+                        # join-success is sent to peer,
+                        # if an account with this username is not exist, and the account is created
+                        else:
+                            db.register(message[1], message[2])
+                            response = "join-success"
+                            logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                            self.tcpClientSocket.send(response.encode())
 
-                #   CREATE ACC    #
-                elif message[0] == "CREATE_NEW_ACCOUNT":
-                    # join-exist is sent to peer,
-                    # if an account with this username already exists
-                    if db.is_account_exist(message[1]):
-                        response = "join-exist"
-                        print("From-> " + self.ip + ":" + str(self.port) + " " + response)
-                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)  
-                        self.tcpClientSocket.send(response.encode())
-                    # join-success is sent to peer,
-                    # if an account with this username is not exist, and the account is created
-                    else:
-                        db.register(message[1], message[2])
-                        response = "join-success"
-                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
-                        self.tcpClientSocket.send(response.encode())
+                    # Delete Account #
+                    elif message[0]== "delAcc":
+                        if db.Delete_user(message[1]):
+                            response="User-Deleted"
+                            logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                            self.tcpClientSocket.send(response.encode())
+                        else:
+                            response="err"
+                            logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                            self.tcpClientSocket.send(response.encode())
 
-                # Delete Account #
-                elif message[0]== "delAcc":
-                    if db.Delete_user(message[1]):
-                        response="User-Deleted"
-                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
-                        self.tcpClientSocket.send(response.encode())
-                    else:
-                        response="err"
-                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
-                        self.tcpClientSocket.send(response.encode())
+                    #   LOGIN    #
+                    elif message[0] == "LOGIN":
+                        # login-account-not-exist is sent to peer,
+                        # if an account with the username does not exist
+                        if not db.is_account_exist(message[1]):
+                            response = "login-account-not-exist"
+                            logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                            self.tcpClientSocket.send(response.encode())
+                        # login-online is sent to peer,
+                        # if an account with the username already online
+                        elif db.is_account_online(message[1]):
+                            response = "login-online"
+                            logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                            self.tcpClientSocket.send(response.encode())
+                        # login-success is sent to peer,
+                        # if an account with the username exists and not online
+                        else:
+                            # retrieves the account's password, and checks if the one entered by the user is correct
+                            retrievedPass = db.get_password(message[1])
+                            # if password is correct, then peer's thread is added to threads list
+                            # peer is added to db with its username, port number, and ip address
+                            if retrievedPass == message[2]:
+                                self.username = message[1]
+                                self.lock.acquire()
+                                try:
+                                    tcpThreads[self.username] = self
+                                finally:
+                                    self.lock.release()
+                                
+                                db.user_login(message[1], self.ip, message[3], message[4])  
 
-                #   LOGIN    #
-                elif message[0] == "LOGIN":
-                    # login-account-not-exist is sent to peer,
-                    # if an account with the username does not exist
-                    if not db.is_account_exist(message[1]):
-                        response = "login-account-not-exist"
-                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
-                        self.tcpClientSocket.send(response.encode())
-                    # login-online is sent to peer,
-                    # if an account with the username already online
-                    elif db.is_account_online(message[1]):
-                        response = "login-online"
-                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
-                        self.tcpClientSocket.send(response.encode())
-                    # login-success is sent to peer,
-                    # if an account with the username exists and not online
-                    else:
-                        # retrieves the account's password, and checks if the one entered by the user is correct
-                        retrievedPass = db.get_password(message[1])
-                        # if password is correct, then peer's thread is added to threads list
-                        # peer is added to db with its username, port number, and ip address
-                        if retrievedPass == message[2]:
-                            self.username = message[1]
+                                # login-success is sent to peer,
+                                # and a udp server thread is created for this peer, and thread is started
+                                # timer thread of the udp server is started
+                                response = "login-success"
+                                logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                                self.tcpClientSocket.send(response.encode())
+                                self.udpServer = UDPServer(self.username, self.tcpClientSocket)
+                                self.udpServer.start()
+                                self.udpServer.timer.start()
+                            # if password not matches and then login-wrong-password response is sent
+                            else:
+                                response = "login-wrong-password"
+                                logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                                self.tcpClientSocket.send(response.encode())
+                    #   LOGOUT  #
+                    elif message[0] == "LOGOUT":
+                        # if user is online,
+                        # removes the user from onlinePeers list
+                        # and removes the thread for this user from tcpThreads
+                        # socket is closed and timer thread of the udp for this
+                        # user is cancelled
+                        if len(message) > 1 and message[1] is not None and db.is_account_online(message[1]):
+                            db.user_logout(message[1])
                             self.lock.acquire()
                             try:
-                                tcpThreads[self.username] = self
+                                if message[1] in tcpThreads:
+                                    del tcpThreads[message[1]]
                             finally:
                                 self.lock.release()
-                            
-                            db.user_login(message[1], self.ip, message[3], message[4])  
 
-                            # login-success is sent to peer,
-                            # and a udp server thread is created for this peer, and thread is started
-                            # timer thread of the udp server is started
-                            response = "login-success"
-                            logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
-                            self.tcpClientSocket.send(response.encode())
-                            self.udpServer = UDPServer(self.username, self.tcpClientSocket)
-                            self.udpServer.start()
-                            self.udpServer.timer.start()
-                        # if password not matches and then login-wrong-password response is sent
+                            print(self.ip + ":" + str(self.port) + " is logged out")
+                            self.tcpClientSocket.close()
+                            self.udpServer.timer.cancel()
+                            break
                         else:
-                            response = "login-wrong-password"
+                            self.tcpClientSocket.close()
+                            break
+                    #   SEARCH  #
+                    elif message[0] == "SEARCH":
+                        # checks if an account with the username exists
+                        if db.is_account_exist(message[1]):
+                            # checks if the account is online
+                            # and sends the related response to peer
+                            if db.is_account_online(message[1]):
+                                peer_info = db.get_peer_ip_port(message[1])
+                                response = "search-success " + peer_info[0] + ":" + peer_info[1] + ":" + peer_info[2]
+                                logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                                self.tcpClientSocket.send(response.encode())
+                            else:
+                                response = "search-user-not-online"
+                                logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                                self.tcpClientSocket.send(response.encode())
+                        # enters if username does not exist 
+                        else:
+                            response = "search-user-not-found"
                             logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
                             self.tcpClientSocket.send(response.encode())
-                #   LOGOUT  #
-                elif message[0] == "LOGOUT":
-                    # if user is online,
-                    # removes the user from onlinePeers list
-                    # and removes the thread for this user from tcpThreads
-                    # socket is closed and timer thread of the udp for this
-                    # user is cancelled
-                    if len(message) > 1 and message[1] is not None and db.is_account_online(message[1]):
-                        db.user_logout(message[1])
-                        self.lock.acquire()
-                        try:
-                            if message[1] in tcpThreads:
-                                del tcpThreads[message[1]]
-                        finally:
-                            self.lock.release()
 
-                        print(self.ip + ":" + str(self.port) + " is logged out")
-                        self.tcpClientSocket.close()
-                        self.udpServer.timer.cancel()
-                        break
-                    else:
-                        self.tcpClientSocket.close()
-                        break
-                #   SEARCH  #
-                elif message[0] == "SEARCH":
-                    # checks if an account with the username exists
-                    if db.is_account_exist(message[1]):
-                        # checks if the account is online
-                        # and sends the related response to peer
-                        if db.is_account_online(message[1]):
-                            peer_info = db.get_peer_ip_port(message[1])
-                            response = "search-success " + peer_info[0] + ":" + peer_info[1] + ":" + peer_info[2]
+                    #    GET ONlINE USERS   #
+                    elif message[0]=="GET_USERS":
+                            online_users = db.get_online_usernames()
+                            response =" ".join(map(str, online_users))
                             logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
                             self.tcpClientSocket.send(response.encode())
-                        else:
-                            response = "search-user-not-online"
-                            logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
-                            self.tcpClientSocket.send(response.encode())
-                    # enters if username does not exist 
-                    else:
-                        response = "search-user-not-found"
-                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
-                        self.tcpClientSocket.send(response.encode())
-
-                #    GET ONlINE USERS   #
-                elif message[0]=="GET_USERS":
-                        online_users = db.get_online_usernames()
-                        response =" ".join(map(str, online_users))
-                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
-                        self.tcpClientSocket.send(response.encode())
-                #    GET CHAT ROOMS   #
-                elif message[0]=="GET_ROOMS":
-                        
-                        if len(message)==1:
-                            chat_rooms_List = db.get_chat_rooms()
-                            response =" ".join(map(str, chat_rooms_List))
-                            logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
-                            self.tcpClientSocket.send(response.encode())
+                    #    GET CHAT ROOMS   #
+                    elif message[0]=="GET_ROOMS":
                             
-                        else:
-                            
-                            chat_rooms_List = db.get_chat_rooms(message[1])
-                            if chat_rooms_List is not None:
+                            if len(message)==1:
+                                chat_rooms_List = db.get_chat_rooms()
                                 response =" ".join(map(str, chat_rooms_List))
                                 logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
                                 self.tcpClientSocket.send(response.encode())
-                            else:  
-                                response= "no-rooms"
-                                logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
-                                self.tcpClientSocket.send(response.encode())
-                # Add socket #
-                elif message[0] == "STORE":
-                    tcp_Clients_Sockets[message[1]] = message[2:]
-                    response = "Stored"
-                    logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
-                    self.tcpClientSocket.send(response.encode())
-
-
-                #    Get Sokets   #
-                elif message[0] == "GETSOKETS":
-                    response = json.dumps(tcp_Clients_Sockets)
-                    logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
-                    self.tcpClientSocket.send(response.encode())
-
-
-                #   Search Room  #
-                elif message[0] == "ROOM":
-                    if db.does_room_exist(message[1]):
-                        room_info = db.get_room_details(message[1])
-                        response = "search-success " + room_info[0] + " " + " ".join(map(str, room_info[1]))
-                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
-                        self.tcpClientSocket.send(response.encode())
-                    # enters if username does not exist 
-                    else:
-                        response = "search-Room-not-found"
-                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
-                        self.tcpClientSocket.send(response.encode())
-                        
-                elif message[0] == "GET_ROOM":
-                    if db.does_room_exist(message[1]):
-                        room_info = db.get_room_members(message[1])
-                        response = {"result": "success", **room_info}
-                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + str(response)) 
-                        response = pickle.dumps(response)
-                        self.tcpClientSocket.send(response)
-                    # if room does not exist 
-                    else:
-                        response = {"result": "error"}
-                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + str(response))
-                        response = pickle.dumps(response)
-                        self.tcpClientSocket.send(response)
-
-                #   JOIN_ROOM  #
-                elif message[0] == "JoinRoom":
-                    if db.is_user_in_chat_room(message[3],message[1]):
-                        response = "Already-in"
+                                
+                            else:
+                                
+                                chat_rooms_List = db.get_chat_rooms(message[1])
+                                if chat_rooms_List is not None:
+                                    response =" ".join(map(str, chat_rooms_List))
+                                    logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                                    self.tcpClientSocket.send(response.encode())
+                                else:  
+                                    response= "no-rooms"
+                                    logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                                    self.tcpClientSocket.send(response.encode())
+                    # Add socket #
+                    elif message[0] == "STORE":
+                        tcp_Clients_Sockets[message[1]] = message[2:]
+                        response = "Stored"
                         logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
                         self.tcpClientSocket.send(response.encode())
-                    else:
-                        retrievedPass = db.get_room_pass(message[1])
-                        if message[2] == retrievedPass:
-                            db.Join_room(message[1],message[3])
-                            response = "join-success"
+
+
+                    #    Get Sokets   #
+                    elif message[0] == "GETSOKETS":
+                        response = json.dumps(tcp_Clients_Sockets)
+                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
+                        self.tcpClientSocket.send(response.encode())
+
+
+                    #   Search Room  #
+                    elif message[0] == "ROOM":
+                        if db.does_room_exist(message[1]):
+                            room_info = db.get_room_details(message[1])
+                            response = "search-success " + room_info[0] + " " + " ".join(map(str, room_info[1]))
+                            logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                            self.tcpClientSocket.send(response.encode())
+                        # enters if username does not exist 
+                        else:
+                            response = "search-Room-not-found"
+                            logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response) 
+                            self.tcpClientSocket.send(response.encode())
+                            
+                    elif message[0] == "GET_ROOM":
+                        if db.does_room_exist(message[1]):
+                            room_info = db.get_room_members(message[1])
+                            response = {"result": "success", **room_info}
+                            logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + str(response)) 
+                            response = pickle.dumps(response)
+                            self.tcpClientSocket.send(response)
+                        # if room does not exist 
+                        else:
+                            response = {"result": "error"}
+                            logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + str(response))
+                            response = pickle.dumps(response)
+                            self.tcpClientSocket.send(response)
+
+                    #   JOIN_ROOM  #
+                    elif message[0] == "JoinRoom":
+                        if db.is_user_in_chat_room(message[3],message[1]):
+                            response = "Already-in"
                             logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
                             self.tcpClientSocket.send(response.encode())
                         else:
-                            response = "Wrong-pass"
-                            logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
-                            self.tcpClientSocket.send(response.encode())
+                            retrievedPass = db.get_room_pass(message[1])
+                            if message[2] == retrievedPass:
+                                db.Join_room(message[1],message[3])
+                                response = "join-success"
+                                logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
+                                self.tcpClientSocket.send(response.encode())
+                            else:
+                                response = "Wrong-pass"
+                                logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
+                                self.tcpClientSocket.send(response.encode())
 
-            #      Leave Room   #
-                elif message[0] == "Leave":
-                    response=db.remove_user_from_room(message[1],message[2])
-                    logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
-                    self.tcpClientSocket.send(response.encode())
+                #      Leave Room   #
+                    elif message[0] == "Leave":
+                        response=db.remove_user_from_room(message[1],message[2])
+                        logging.info("Send to " + self.ip + ":" + str(self.port) + " -> " + response)
+                        self.tcpClientSocket.send(response.encode())
                     
 
             except OSError as oErr:
