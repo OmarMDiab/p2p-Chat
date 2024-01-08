@@ -137,6 +137,9 @@ class peerMain:
                 return self.main_menu(0, status + " Please try again") # redirect to main menu
             
 
+        
+            
+
     def select_menu(self, intialChoice = 0, intitalTitle = "Please select an option: "):
         os.system('cls')
         if(globals.ignore_input.is_set()):
@@ -386,7 +389,7 @@ class peerMain:
         choice = answers["join_chat"]
         try:
             if choice:
-                print("-- type 'quit' to exit the chat --")
+                print(self.styleAsError("Type 'quit' to exit the chat"))
                 okMessage = "OK " + self.loginCredentials[0]
                 logging.info("Send to " + self.peerServer.connectedPeerIP + " -> " + okMessage)
                 self.peerServer.connectedPeerSocket.send(okMessage.encode())
@@ -488,8 +491,8 @@ class peerMain:
 
         if '\033]8;;' in message:
             url = re.search(r'\033]8;;(.*?)\033\\', message).group(1)
-            webbrowser.open(url)
-            message = message + '( '+ url + ' )'
+            webbrowser.open(url)  # to open 
+            #message = message + '( '+ url + ' )'
 
         data = { 
             "message": message,
@@ -752,7 +755,7 @@ class peerMain:
                 message = "LOGOUT " + self.loginCredentials[0]
                 self.timer.cancel()
             else:
-                message = "LOGOUT"
+                message = "LOGOUT "
             logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
             self.tcpClientSocket.send(message.encode())  
         except Exception as e:

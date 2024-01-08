@@ -90,8 +90,9 @@ class DB:
         self.db.Chatrooms.insert_one(Chat_room)
 
     def Delete_room(self, room_name, Admin="leaved"):
+
         # >>  Check if the Admin exists and has the authority to delete the room
-        admin_check = self.db.chatrooms.find_one({"Admin": Admin, "ChatRooms": room_name})
+        admin_check = self.db.Chatrooms.find_one({"Admin": Admin, "room_name": room_name})
 
         if Admin=="leaved":  # Empty Chatroom
             self.db.Chatrooms.delete_one({"room_name": room_name}) 
