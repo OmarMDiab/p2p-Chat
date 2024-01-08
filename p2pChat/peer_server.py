@@ -13,7 +13,7 @@ import globals
 import pickle
 from colorama import init, Fore, Back, Style
 import random
-
+import re
 
 init(autoreset=True)
 
@@ -149,6 +149,7 @@ class PeerServer(threading.Thread):
                         # if it is not an empty message, show this message to the user
                         elif messageReceived[:4] != "quit" and len(messageReceived)!= 0:
 # >>>>>>>>>>>>>>>> fixing alignemnt
+                            messageReceived=self.one_to_one_Fomrating(messageReceived)
                             print('\n\033[1A' + '\033[K', end="")
                             print(self.get_user_color(self.chattingClientName) + self.chattingClientName + ": " + Fore.RESET + messageReceived)
                             print ("you:", end=" ")
@@ -190,7 +191,21 @@ class PeerServer(threading.Thread):
         # Use the hash of the username to choose a color
         random.seed(hash(username))
         color = random.choice(colors)
-        return color        
+        return color  
+        
+    def one_to_one_Fomrating(self, raw_message):
+        formatted_message = raw_message
+
+        # **bold**
+        formatted_message = re.sub(r'\*\*(.*?)\*\*', lambda match: f'\033[1m{match.group(1)}\033[0m', formatted_message)
+
+        # __italic__
+        formatted_message = re.sub(r'__(.*?)__', lambda match: f'\033[3m{match.group(1)}\033[0m', formatted_message)
+
+        # [hyperlink](url)
+        formatted_message = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'\033]8;;\2\033\\ \1 \033]8;;\033\\', formatted_message)
+        
+        return formatted_message  
 
 # Client side of peer
 class PeerClient(threading.Thread):
@@ -319,3 +334,5 @@ class PeerClient(threading.Thread):
                     logging.info("Send to " + self.ipToConnect + ":" + str(self.portToConnect) + " -> quit")
                 self.responseReceived = None
                 self.tcpClientSocket.close()
+
+    

@@ -137,6 +137,9 @@ class peerMain:
                 return self.main_menu(0, status + " Please try again") # redirect to main menu
             
 
+        
+            
+
     def select_menu(self, intialChoice = 0, intitalTitle = "Please select an option: "):
         os.system('cls')
         if(globals.ignore_input.is_set()):
@@ -212,13 +215,14 @@ class peerMain:
         elif choice == 4: # Logout
             self.logout(1)
             self.isOnline = False
+            name = self.loginCredentials[0]
             self.loginCredentials = (None, None)
             self.peerServer.isOnline = False
             self.peerServer.tcpServerSocket.close()
             if self.peerClient is not None:
                 self.peerClient.tcpClientSocket.close()
             
-            return self.CreateNewPeer()
+            return self.CreateNewPeer(self.styleAsSuccess(f"{name} Logged Out Successfully!"))
         
         elif choice == 5: # Delete Account
             if self.delete_account(self.loginCredentials[0]):
@@ -231,7 +235,6 @@ class peerMain:
                     self.peerClient.tcpClientSocket.close()
                 
                 return self.CreateNewPeer(self.styleAsSuccess("Your Account is Deleted Successfully!"))
-
             else:
                 return self.select_menu(0, self.styleAsError("error in deleting your Account"))
             
@@ -382,7 +385,7 @@ class peerMain:
         choice = answers["join_chat"]
         try:
             if choice:
-                print("-- type 'quit' to exit the chat --")
+                print(self.styleAsError("Type 'quit' to exit the chat"))
                 okMessage = "OK " + self.loginCredentials[0]
                 logging.info("Send to " + self.peerServer.connectedPeerIP + " -> " + okMessage)
                 self.peerServer.connectedPeerSocket.send(okMessage.encode())
@@ -487,8 +490,8 @@ class peerMain:
 
         if '\033]8;;' in message:
             url = re.search(r'\033]8;;(.*?)\033\\', message).group(1)
-            webbrowser.open(url)
-            message = message + '( '+ url + ' )'
+            webbrowser.open(url)  # to open 
+            #message = message + '( '+ url + ' )'
 
         data = { 
             "message": message,
@@ -749,7 +752,7 @@ class peerMain:
                 message = "LOGOUT " + self.loginCredentials[0]
                 self.timer.cancel()
             else:
-                message = "LOGOUT"
+                message = "LOGOUT "
             logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
             self.tcpClientSocket.send(message.encode())  
         except Exception as e:
@@ -819,6 +822,7 @@ class peerMain:
     def CreateNewPeer(self, message):
         del self
         p = peerMain(message=message)
+        return 1
 
 
 # peer is started

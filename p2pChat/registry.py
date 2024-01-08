@@ -43,7 +43,7 @@ class ClientThread(threading.Thread):
                 # waits for incoming messages from peers
                 message = self.tcpClientSocket.recv(1024).decode().split()
                 logging.info("Received from " + self.ip + ":" + str(self.port) + " -> " + " ".join(message))  
-
+                
 
                 #   Create Room    #
                 if message[0] == "CREATE":
