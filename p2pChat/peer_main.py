@@ -221,7 +221,7 @@ class peerMain:
             return self.CreateNewPeer()
         
         elif choice == 5: # Delete Account
-            if self.Delete_Account(self.loginCredentials[0]):
+            if self.delete_account(self.loginCredentials[0]):
                 self.logout(1)
                 self.isOnline = False
                 self.loginCredentials = (None, None)
@@ -266,7 +266,7 @@ class peerMain:
                     if room_name == "Go back to chat room menu":
                         return self.chatroom_menu(0)
                     else:
-                        self.Room_menu(room_name,0,"")    
+                        self.room_menu(room_name,0,"")    
                 else:
                     self.chatroom_menu(0, self.styleAsError("You are not in any room"))
             except Exception as e:
@@ -326,7 +326,7 @@ class peerMain:
         elif choice == 4: # Go back to main menu
             return self.select_menu(0, self.styleAsInfo(f"Hello {self.loginCredentials[0]}"))
         
-    def Room_menu(self, room_name, intialChoice = 0,intitalTitle=""):
+    def room_menu(self, room_name, intialChoice = 0,intitalTitle=""):
         os.system('cls')
         intitalTitle = f"Room: {room_name}" if intitalTitle == "" else intitalTitle
         print(intitalTitle + "\n")
@@ -338,7 +338,7 @@ class peerMain:
             questions = [inquirer.List('room_main_choice',message="Please select an option",choices=options,carousel=True)]
             answers = inquirer.prompt(questions)
             choice = options.index(answers['room_main_choice']) + 1
-            return self.Room_menu(room_name,choice, "") # redirect to the required page
+            return self.room_menu(room_name,choice, "") # redirect to the required page
 
         if choice == 1: # Enter Room
                 self.enter_chat_room(room_name, self.loginCredentials[0])
@@ -372,10 +372,6 @@ class peerMain:
             
         elif choice == 4: # Go back to Chatrooms Management
             return self.chatroom_menu(0, self.styleAsInfo("Chatroom management"))
-
-            
-
-
 
     def one_to_one_chat_menu(self):
         print("Enter OK to accept or REJECT to reject:  ")
@@ -411,6 +407,9 @@ class peerMain:
                 self.logout(1)
                 self.peerServer.isOnline = False
                 self.peerServer.tcpServerSocket.close()
+                self.peerServer.udpServerSocket.close()
+                self.tcpClientSocket.close()
+                self.udpClientSocket.close()
                 if self.peerClient is not None:
                     self.peerClient.tcpClientSocket.close()
             print("Resources cleaned up successfully.")
@@ -613,8 +612,7 @@ class peerMain:
         except Exception as e:
             logging.error(f"Error in join_room_chat: {e}")
             return "An error occurred while joining the chat room."
-
-        
+       
     def leave_room(self, room_name, username):
         try:
             # Constructing and sending the leave room message
@@ -702,7 +700,7 @@ class peerMain:
             logging.error(f"Error in create_new_account: {e}")
             return "An error occurred while creating a new account."
 
-    def Delete_Account(self,username):
+    def delete_account(self,username):
         message = "delAcc " + " " + username
         logging.info(f"Send to {self.registryName}:{self.registryPort} -> {message}")
         self.tcpClientSocket.send(message.encode())
@@ -714,7 +712,6 @@ class peerMain:
             return 1
         else:
             return 0
-
 
     # login function
     def login(self, username, password, peerServerPort, peerServerUDPPort):
@@ -789,7 +786,6 @@ class peerMain:
             print(self.styleAsError("An error occurred while searching for the user."))
             return None
 
-        
     def store_soket(self,username,soket):
         message = "STORE " + username + " " + str(soket)
         logging.info("Send to " + self.registryName + ":" + str(self.registryPort) + " -> " + message)
