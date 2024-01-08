@@ -212,13 +212,14 @@ class peerMain:
         elif choice == 4: # Logout
             self.logout(1)
             self.isOnline = False
+            name = self.loginCredentials[0]
             self.loginCredentials = (None, None)
             self.peerServer.isOnline = False
             self.peerServer.tcpServerSocket.close()
             if self.peerClient is not None:
                 self.peerClient.tcpClientSocket.close()
             
-            return self.CreateNewPeer()
+            return self.CreateNewPeer(self.styleAsSuccess(f"{name} Logged Out Successfully!"))
         
         elif choice == 5: # Delete Account
             if self.Delete_Account(self.loginCredentials[0]):
@@ -231,7 +232,6 @@ class peerMain:
                     self.peerClient.tcpClientSocket.close()
                 
                 return self.CreateNewPeer(self.styleAsSuccess("Your Account is Deleted Successfully!"))
-
             else:
                 return self.select_menu(0, self.styleAsError("error in deleting your Account"))
             
@@ -823,6 +823,7 @@ class peerMain:
     def CreateNewPeer(self, message):
         del self
         p = peerMain(message=message)
+        return 1
 
 
 # peer is started
